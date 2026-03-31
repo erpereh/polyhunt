@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PolyHunt — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ─── Sidebar ──────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-symbol">◈</span>
+        <span class="logo-name">PolyHunt</span>
+        <span class="logo-version">v1.0</span>
+      </div>
+
+      <nav class="nav">
+        <a class="nav-item active" data-section="overview" onclick="showSection('overview')">
+          <span class="nav-icon">⬡</span> Overview
+        </a>
+        <a class="nav-item" data-section="positions" onclick="showSection('positions')">
+          <span class="nav-icon">◎</span> Posiciones
+        </a>
+        <a class="nav-item" data-section="trades" onclick="showSection('trades')">
+          <span class="nav-icon">⟳</span> Historial
+        </a>
+        <a class="nav-item" data-section="markets" onclick="showSection('markets')">
+          <span class="nav-icon">◫</span> Mercados
+        </a>
+        <a class="nav-item" data-section="analyses" onclick="showSection('analyses')">
+          <span class="nav-icon">◉</span> Análisis LLM
+        </a>
+        <a class="nav-item" data-section="news" onclick="showSection('news')">
+          <span class="nav-icon">◌</span> Noticias
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="status-dot active" id="status-dot"></span>
+        <span id="bot-status-text">Bot activo</span>
+        <span class="sim-badge">SIM</span>
+      </div>
+    </aside>
+
+    <!-- ─── Main content ─────────────────────────────────────────────── -->
+    <main class="main">
+
+      <div class="page-header">
+        <h1 class="page-title" id="page-title">Overview</h1>
+        <span class="last-update" id="last-update">Cargando…</span>
+      </div>
+
+      <!-- ── Overview ─────────────────────────────────────────────────── -->
+      <section id="section-overview">
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card featured">
+            <div class="kpi-label">Balance simulado</div>
+            <div class="kpi-value" id="kpi-balance">$—</div>
+            <div class="kpi-delta neutral" id="kpi-balance-delta">
+              <span>Paper trading — sin fondos reales</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">P&amp;L Total</div>
+            <div class="kpi-value" id="kpi-total-pnl">$—</div>
+            <div class="kpi-delta neutral" id="kpi-pnl-delta">desde el inicio</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">No realizado</div>
+            <div class="kpi-value" id="kpi-unrealized">$—</div>
+            <div class="kpi-delta neutral" id="kpi-open-count">— posiciones abiertas</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Win Rate</div>
+            <div class="kpi-value" id="kpi-winrate">—%</div>
+            <div class="kpi-delta neutral" id="kpi-trade-count">— trades cerrados</div>
+          </div>
+        </div>
+
+        <!-- Posiciones abiertas (resumen en overview) -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Posiciones abiertas</span>
+            <span class="section-count" id="overview-pos-count">0</span>
+          </div>
+          <div id="overview-positions-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">◎</div>
+              <div class="empty-state-title">Sin posiciones abiertas</div>
+              <div class="empty-state-desc">El bot abrirá posiciones cuando detecte oportunidades con gap ≥ 15%.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Últimas noticias en overview -->
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Noticias recientes</span>
+            <span class="section-count" id="overview-news-count">0</span>
+          </div>
+          <div id="overview-news-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">◌</div>
+              <div class="empty-state-title">Sin noticias procesadas</div>
+              <div class="empty-state-desc">El monitor de noticias procesará feeds RSS en el próximo ciclo.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Posiciones ────────────────────────────────────────────────── -->
+      <section id="section-positions" class="hidden">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Posiciones abiertas</span>
+            <span class="section-count" id="positions-count">0</span>
+          </div>
+          <div id="positions-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">◎</div>
+              <div class="empty-state-title">Sin posiciones abiertas</div>
+              <div class="empty-state-desc">El bot abrirá posiciones cuando detecte oportunidades con gap ≥ 15%.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Historial de trades ────────────────────────────────────────── -->
+      <section id="section-trades" class="hidden">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Historial de trades</span>
+            <span class="section-count" id="trades-count">0</span>
+          </div>
+          <div id="trades-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">⟳</div>
+              <div class="empty-state-title">Sin trades registrados</div>
+              <div class="empty-state-desc">El historial completo de operaciones aparecerá aquí.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Mercados ──────────────────────────────────────────────────── -->
+      <section id="section-markets" class="hidden">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Mercados rastreados</span>
+            <span class="section-count" id="markets-count">0</span>
+          </div>
+          <div id="markets-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">◫</div>
+              <div class="empty-state-title">Sin mercados escaneados</div>
+              <div class="empty-state-desc">El escáner detectará mercados políticos de Polymarket en el próximo ciclo.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Análisis LLM ──────────────────────────────────────────────── -->
+      <section id="section-analyses" class="hidden">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Análisis LLM recientes</span>
+            <span class="section-count" id="analyses-count">0</span>
+          </div>
+          <div id="analyses-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">◉</div>
+              <div class="empty-state-title">Sin análisis registrados</div>
+              <div class="empty-state-desc">Los análisis de Groq y Gemini se guardan aquí para calibración posterior.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Noticias ──────────────────────────────────────────────────── -->
+      <section id="section-news" class="hidden">
+        <div class="section">
+          <div class="section-header">
+            <span class="section-title">Noticias procesadas</span>
+            <span class="section-count" id="news-count">0</span>
+          </div>
+          <div id="news-body">
+            <div class="empty-state">
+              <div class="empty-state-icon">◌</div>
+              <div class="empty-state-title">Sin noticias procesadas</div>
+              <div class="empty-state-desc">El monitor RSS procesará noticias con score de relevancia ≥ 0.3.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

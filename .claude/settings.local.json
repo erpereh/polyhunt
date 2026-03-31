@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_organizations",
+      "mcp__claude_ai_Supabase__get_cost",
+      "mcp__claude_ai_Supabase__confirm_cost",
+      "mcp__claude_ai_Supabase__create_project",
+      "mcp__claude_ai_Supabase__get_project_url",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__get_publishable_keys",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
+    ]
+  }
+}
