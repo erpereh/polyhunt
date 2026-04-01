@@ -21,14 +21,21 @@ Arranque:
   - Ctrl+C para parada limpia
 """
 import logging
+import os
 import signal
 import sys
 import threading
 import time
 from datetime import datetime, timezone
 
+# Forzar UTF-8 en consola Windows para caracteres especiales
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # Validar variables de entorno antes de nada
-import config  # noqa: F401 — valida y hace sys.exit si falta alguna variable
+__import__("config")  # valida variables de entorno al arrancar (sys.exit si falta alguna)
 
 from core.market_scanner import get_political_markets, save_markets_to_db, get_market_price
 from core.llm_analyzer   import full_analysis
@@ -38,7 +45,7 @@ from core.paper_trader   import (
     update_unrealized_pnl,
     check_stop_losses,
 )
-from server import app, set_bot_status
+from server import app, set_bot_status, _run_event
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 
@@ -47,21 +54,40 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+# FileHandler: escribe en polyhunt.log para que /api/logs pueda leerlo
+_log_file = os.path.join(os.path.dirname(__file__), "polyhunt.log")
+_fh = logging.FileHandler(_log_file, encoding="utf-8")
+_fh.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+))
+logging.getLogger().addHandler(_fh)
+
 logger = logging.getLogger(__name__)
 
 # ─── Configuración ────────────────────────────────────────────────────────────
 
-CYCLE_SECONDS   = 15 * 60   # 15 minutos entre ciclos
-TRADE_SIZE_USD  = 500.0      # tamaño base de cada posición en USD
-FLASK_PORT      = 5000
-FLASK_HOST      = "0.0.0.0"
+CYCLE_SECONDS        = 15 * 60   # 15 minutos entre ciclos
+TRADE_SIZE_USD       = 500.0      # tamaño base de cada posición en USD
+FLASK_PORT           = 5000
+FLASK_HOST           = "0.0.0.0"
+MARKETS_PER_CYCLE    = 50         # máximo de mercados a analizar por ciclo
+PRICE_SKIP_LOW       = 0.02       # skip si precio YES < 2% (casi resuelto NO)
+PRICE_SKIP_HIGH      = 0.98       # skip si precio YES > 98% (casi resuelto YES)
+
+# Palabras clave que identifican mercados especulativos sin datos objetivos.
+# Conteos de redes sociales, métricas de engagement, etc.
+SPECULATION_KEYWORDS = frozenset([
+    "tweet", "tweets", "post", "posts", "retweet", "retweets",
+    "follower", "followers", "view", "views", "like", "likes",
+])
 
 # ─── Control de parada ────────────────────────────────────────────────────────
 
 _stop_event = threading.Event()
 
 
-def _handle_sigint(sig, frame):
+def _handle_sigint(_sig, _frame):
     """Maneja Ctrl+C para parada limpia."""
     print("\n[PolyHunt] Señal de parada recibida — cerrando…")
     _stop_event.set()
@@ -118,16 +144,56 @@ def run_cycle(cycle_num: int) -> None:
     logger.info("[Ciclo] Paso 2/5 — Procesando noticias RSS…")
     try:
         articles = fetch_news(max_age_hours=6)
-        news_saved = save_articles_to_db(articles, active_markets=markets[:15])
+        news_saved = save_articles_to_db(articles, active_markets=markets)
         logger.info(f"[Ciclo] {len(articles)} artículos obtenidos, {news_saved} guardados")
     except Exception as e:
         logger.error(f"[Ciclo] Error procesando noticias: {e}")
 
-    # ── 3. Analizar mercados con LLM y abrir trades ───────────────────────────
-    logger.info(f"[Ciclo] Paso 3/5 — Analizando {len(markets)} mercados con LLM…")
+    # ── 3. Seleccionar top-50 por volumen con rotación entre ciclos ──────────────
+    # Ordenar por volumen desc y tomar los primeros MARKETS_PER_CYCLE,
+    # rotando el punto de inicio para cubrir todos los mercados gradualmente.
+    markets_sorted = sorted(markets, key=lambda m: m.get("volume", 0), reverse=True)
+    total_markets  = len(markets_sorted)
+    rotation_start = ((cycle_num - 1) * MARKETS_PER_CYCLE) % max(total_markets, 1)
+    # Construir ventana rotativa circular
+    indices = [(rotation_start + i) % total_markets for i in range(min(MARKETS_PER_CYCLE, total_markets))]
+    batch   = [markets_sorted[i] for i in indices]
+
+    logger.info(
+        f"[Ciclo] Paso 3/5 — Analizando {len(batch)}/{total_markets} mercados "
+        f"(rot={rotation_start}, ciclo={cycle_num})…"
+    )
     trades_opened = 0
 
-    for market in markets:
+    try:
+        from core.news_monitor import get_relevant_news
+        news_cache = get_relevant_news(limit=5)
+    except Exception:
+        news_cache = []
+
+    # Cargar set de market_ids con noticias relacionadas en los últimos 7 días.
+    # Si related_news_count = 0 para un mercado → skip (sin contexto suficiente).
+    # Si la consulta falla → markets_with_news vacío → no filtrar nada (fail-open).
+    try:
+        from core.db import get_db as _get_db
+        from datetime import timedelta
+        _cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        _news_rows = (
+            _get_db()
+            .table("news_articles")
+            .select("related_market_id")
+            .gte("processed_at", _cutoff)
+            .not_.is_("related_market_id", "null")
+            .execute()
+            .data or []
+        )
+        markets_with_news = {row["related_market_id"] for row in _news_rows}
+        logger.info(f"[Ciclo] {len(markets_with_news)} mercados con noticias en los últimos 7 días")
+    except Exception as e:
+        logger.warning(f"[Ciclo] No se pudo cargar markets_with_news — filtro desactivado: {e}")
+        markets_with_news = set()
+
+    for market in batch:
         if _stop_event.is_set():
             break
 
@@ -148,25 +214,53 @@ def run_cycle(cycle_num: int) -> None:
             logger.debug(f"[Ciclo] Sin precio para {market_id[:16]}… — saltando")
             continue
 
-        # Obtener noticias relevantes del market almacenadas en Supabase
-        try:
-            from core.news_monitor import get_relevant_news
-            news_for_market = get_relevant_news(question, limit=5)
-        except Exception:
-            news_for_market = []
+        # Filtro 1: precios extremos — mercado casi resuelto, no hay edge real
+        if market_price < PRICE_SKIP_LOW or market_price > PRICE_SKIP_HIGH:
+            logger.info(
+                f"[Ciclo] SKIP precio extremo ({market_price:.1%}) | {question[:50]}"
+            )
+            continue
+
+        # Filtro 2: mercados especulativos sin datos objetivos (métricas de redes sociales)
+        question_lower = question.lower()
+        if any(kw in question_lower for kw in SPECULATION_KEYWORDS):
+            logger.info(
+                f"[Ciclo] SKIP keyword especulativo | {question[:50]}"
+            )
+            continue
+
+        # Anotar si este mercado tiene noticias recientes (afecta umbral de gap post-análisis)
+        has_news = bool(markets_with_news) and market_id in markets_with_news
 
         # Análisis LLM dual
         try:
             groq_result, gemini_result, gap, should_trade = full_analysis(
                 market=market,
                 market_price=market_price,
-                news_articles=news_for_market,
+                news_articles=news_cache,
             )
         except Exception as e:
             logger.error(f"[Ciclo] Error en full_analysis para {market_id[:16]}…: {e}")
             continue
 
         if not should_trade:
+            continue
+
+        # Filtro 3: confianza baja → no operar aunque el gap sea grande
+        # (full_analysis ya lo chequea internamente, esto es defensa en profundidad)
+        if groq_result.get("confidence") == "low":
+            logger.info(
+                f"[Ciclo] SKIP confianza baja | {question[:50]}"
+            )
+            continue
+
+        # Filtro 4 (two-tier noticias):
+        #   - Con noticias recientes → umbral normal gap >= 15% (ya garantizado por full_analysis)
+        #   - Sin noticias recientes → exigir gap >= 20% para compensar la incertidumbre
+        if not has_news and gap < 0.20:
+            logger.info(
+                f"[Ciclo] SKIP gap {gap:.1%} insuficiente sin noticias (req. >20%) | {question[:50]}"
+            )
             continue
 
         # Determinar dirección del trade
@@ -181,26 +275,26 @@ def run_cycle(cycle_num: int) -> None:
         gemini_reasoning = gemini_result.get("reasoning", "") if gemini_result else None
 
         trade_id, msg = open_paper_trade(
-            market_id       = market_id,
-            direction       = direction,
-            size_usd        = TRADE_SIZE_USD,
-            entry_price     = market_price,
-            llm_probability = float(prob_yes),
-            gap             = gap,
-            groq_reasoning  = groq_reasoning,
-            gemini_reasoning= gemini_reasoning,
+            market_id        = market_id,
+            direction        = direction,
+            size_usd         = TRADE_SIZE_USD,
+            entry_price      = market_price,
+            llm_probability  = float(prob_yes),
+            gap              = gap,
+            groq_reasoning   = groq_reasoning,
+            gemini_reasoning = gemini_reasoning,
         )
 
         if trade_id:
             trades_opened += 1
             logger.info(
-                f"[Ciclo] ✅ Trade #{trade_id} abierto | {direction} {question[:40]}… "
+                f"[Ciclo] Trade #{trade_id} abierto | {direction} {question[:40]}… "
                 f"gap={gap:.1%} @ {market_price:.2%}"
             )
         else:
             logger.debug(f"[Ciclo] Trade no abierto: {msg}")
 
-        # Pequeña pausa para no saturar la API de Groq
+        # Pausa para no saturar la API de Groq
         time.sleep(0.5)
 
     logger.info(f"[Ciclo] {trades_opened} trades abiertos en este ciclo")
@@ -210,7 +304,7 @@ def run_cycle(cycle_num: int) -> None:
     try:
         from core.db import get_db
         db = get_db()
-        positions = db.table("positions").select("market_id, yes_token_id, markets(yes_token_id)").execute().data or []
+        positions = db.table("positions").select("market_id, markets(yes_token_id)").execute().data or []
 
         for pos in positions:
             if _stop_event.is_set():
@@ -270,21 +364,29 @@ def main() -> None:
     time.sleep(1)  # esperar que Flask arranque
 
     print()
-    print("╔══════════════════════════════════════════════════╗")
-    print("║          ◈  PolyHunt — Paper Trading Bot         ║")
-    print("║                SIMULADO — sin fondos reales      ║")
-    print("╠══════════════════════════════════════════════════╣")
-    print(f"║  Dashboard → http://localhost:{FLASK_PORT}                 ║")
-    print(f"║  Ciclo     → cada {CYCLE_SECONDS // 60} minutos                      ║")
-    print(f"║  Tamaño    → ${TRADE_SIZE_USD:.0f} por posición                ║")
-    print("║  Parar     → Ctrl+C                              ║")
-    print("╚══════════════════════════════════════════════════╝")
+    print("=" * 52)
+    print("   PolyHunt -- Paper Trading Bot")
+    print("   SIMULADO -- sin fondos reales")
+    print("=" * 52)
+    print(f"   Dashboard -> http://localhost:{FLASK_PORT}")
+    print(f"   Ciclo     -> cada {CYCLE_SECONDS // 60} minutos")
+    print(f"   Tamano    -> ${TRADE_SIZE_USD:.0f} por posicion")
+    print("   Parar     -> Ctrl+C")
+    print("=" * 52)
     print()
 
-    set_bot_status(running=True)
+    logger.info("[PolyHunt] Bot arrancado en estado PAUSADO — actívalo desde el dashboard.")
+    set_bot_status(running=False)
 
     cycle = 0
     while not _stop_event.is_set():
+        # Bloquear mientras el bot está pausado.
+        # Timeout de 5s para poder chequear _stop_event periódicamente.
+        if not _run_event.wait(timeout=5.0):
+            continue
+        if _stop_event.is_set():
+            break
+
         cycle += 1
         try:
             run_cycle(cycle)

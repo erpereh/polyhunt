@@ -118,7 +118,8 @@ function renderKPIs(data) {
   }
   const pnlDeltaEl = document.getElementById('kpi-pnl-delta');
   if (pnlDeltaEl) {
-    const pct = balance > 0 ? ((balance - 10000) / 10000 * 100).toFixed(1) : '0.0';
+    const initialBalance = parseFloat(account.initial_balance || 10000);
+    const pct = initialBalance > 0 ? ((balance - initialBalance) / initialBalance * 100).toFixed(1) : '0.0';
     pnlDeltaEl.textContent = `${pct >= 0 ? '+' : ''}${pct}% desde el inicio`;
     pnlDeltaEl.className = 'kpi-delta ' + (totalPnl >= 0 ? 'up' : 'down');
   }
@@ -141,6 +142,9 @@ function renderKPIs(data) {
   if (tradeCountEl) {
     tradeCountEl.textContent = `${closedTrades.length} trades cerrados`;
   }
+
+  // Bloquear input de capital si hay cualquier trade o posición en la BD
+  updateCapitalUI(data.has_activity === true);
 }
 
 /* ─── Render Posiciones ─────────────────────────────────────────────────────── */
@@ -437,6 +441,117 @@ async function refresh() {
   }
 }
 
+/* ─── Controles del bot ─────────────────────────────────────────────────────── */
+
+async function botStart() {
+  const r = await fetch('/api/bot/start', { method: 'POST' });
+  if (r.ok) updateBotStatusUI(true);
+}
+
+async function botStop() {
+  const r = await fetch('/api/bot/stop', { method: 'POST' });
+  if (r.ok) updateBotStatusUI(false);
+}
+
+async function resetDB() {
+  const bal = parseFloat(document.getElementById('capital-input').value) || 10000;
+  if (!confirm(`¿Seguro? Esto borrará TODOS los datos.\nBalance inicial: $${bal.toLocaleString()}`)) return;
+  const r = await fetch('/api/reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ balance: bal }),
+  });
+  const d = await r.json();
+  if (r.ok) { alert('BD reseteada correctamente.'); refresh(); }
+  else alert('Error: ' + (d.error || 'desconocido'));
+}
+
+async function applyCapital() {
+  const val = parseFloat(document.getElementById('capital-input').value);
+  if (!val || val < 100 || val > 1_000_000) {
+    alert('El capital debe estar entre $100 y $1,000,000');
+    return;
+  }
+  const r = await fetch('/api/config/balance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: val }),
+  });
+  const d = await r.json();
+  if (r.ok) { alert(`Capital actualizado: $${val.toLocaleString()}`); refresh(); }
+  else alert('Error: ' + (d.error || 'desconocido'));
+}
+
+function updateBotStatusUI(isRunning) {
+  const badge    = document.getElementById('ctrl-status-badge');
+  const btnStart = document.getElementById('btn-start');
+  const btnStop  = document.getElementById('btn-stop');
+  const btnReset = document.getElementById('btn-reset');
+  if (!badge) return;
+
+  badge.textContent = isRunning ? '● ACTIVO' : '● PAUSADO';
+  badge.className   = 'bot-status-badge ' + (isRunning ? 'running' : 'paused');
+  if (btnStart) btnStart.disabled = isRunning;
+  if (btnStop)  btnStop.disabled  = !isRunning;
+  // Botón reset solo visible cuando el bot está pausado
+  if (btnReset) btnReset.style.display = isRunning ? 'none' : '';
+}
+
+function updateCapitalUI(hasTrades) {
+  const input  = document.getElementById('capital-input');
+  const lock   = document.getElementById('capital-lock');
+  const btnCap = document.getElementById('btn-capital');
+  if (!input) return;
+  input.disabled  = hasTrades;
+  if (btnCap) btnCap.disabled = hasTrades;
+  if (lock)   lock.className  = 'capital-lock' + (hasTrades ? '' : ' hidden');
+}
+
+function toggleConsole() {
+  const body   = document.getElementById('console-body');
+  const toggle = document.getElementById('console-toggle');
+  if (!body || !toggle) return;
+  const collapsed = body.classList.toggle('collapsed');
+  toggle.classList.toggle('collapsed', collapsed);
+  toggle.textContent = collapsed ? '▶' : '▼';
+}
+
 /* ─── Inicialización ────────────────────────────────────────────────────────── */
 refresh();
 setInterval(refresh, 60_000); // refresco cada 60 segundos
+
+// Poll de estado del bot cada 5s (ligero, sin datos pesados)
+async function refreshStatus() {
+  try {
+    const d = await fetch('/api/status').then(r => r.json());
+    updateBotStatusUI(d.running === true);
+    if (d.last_cycle) {
+      const el = document.getElementById('ctrl-last-cycle');
+      if (el) el.textContent = 'Último ciclo: ' + new Date(d.last_cycle).toLocaleTimeString('es-ES');
+    }
+  } catch (_) {}
+}
+refreshStatus();
+setInterval(refreshStatus, 5000);
+
+// Poll de logs cada 5s
+let _consolePinned = true;
+async function refreshLogs() {
+  try {
+    const d   = await fetch('/api/logs').then(r => r.json());
+    const out = document.getElementById('console-output');
+    if (!out) return;
+    out.textContent = (d.lines || []).join('\n');
+    if (_consolePinned) out.scrollTop = out.scrollHeight;
+  } catch (_) {}
+}
+refreshLogs();
+setInterval(refreshLogs, 5000);
+
+// Detectar scroll manual en la consola para desactivar auto-scroll
+const _consoleOut = document.getElementById('console-output');
+if (_consoleOut) {
+  _consoleOut.addEventListener('scroll', function () {
+    _consolePinned = this.scrollTop + this.clientHeight >= this.scrollHeight - 20;
+  });
+}

@@ -27,18 +27,24 @@ def _get_groq() -> Groq:
     return _groq_client
 
 
-# Feeds RSS ordenados por relevancia para mercados políticos de Polymarket
+# Feeds RSS ordenados por relevancia para mercados políticos globales de Polymarket
 NEWS_FEEDS = [
-    # Política USA — máxima relevancia
+    # Política USA
     "https://feeds.reuters.com/Reuters/PoliticsNews",
     "https://rss.politico.com/politics-news.xml",
     "https://thehill.com/feed/",
-    # Noticias internacionales
+    # Internacional inglés
     "http://feeds.bbci.co.uk/news/politics/rss.xml",
     "https://feeds.bbci.co.uk/news/world/rss.xml",
-    # Google News búsquedas dirigidas
+    # Internacional español
+    "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada",
+    "https://www.bbc.co.uk/mundo/index.xml",
+    "https://rss.dw.com/rdf/rss-es-all",
+    # Google News dirigido
     "https://news.google.com/rss/search?q=US+election+prediction&hl=en&gl=US&ceid=US:en",
-    "https://news.google.com/rss/search?q=US+politics+2025&hl=en&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=US+politics+2026&hl=en&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=Iran+Trump+war&hl=en&gl=US&ceid=US:en",
+    "https://news.google.com/rss/search?q=elecciones+2026&hl=es&gl=ES&ceid=ES:es",
 ]
 
 
@@ -140,7 +146,7 @@ def score_relevance(article: dict, market_question: str) -> float:
     return 0.0
 
 
-def get_relevant_news(market_question: str, limit: int = 5) -> list[dict]:
+def get_relevant_news(limit: int = 5) -> list[dict]:
     """
     Obtiene las noticias más relevantes almacenadas en Supabase
     (score >= 0.3, ordenadas por score desc).
@@ -193,8 +199,8 @@ def save_articles_to_db(articles: list[dict], active_markets: list[dict] = None)
             if active_markets:
                 title_lower = title.lower()
 
-                # Paso 1: keyword overlap rápido
-                for market in active_markets[:15]:
+                # Paso 1: keyword overlap rápido (todos los mercados activos)
+                for market in active_markets:
                     q_words   = set(w for w in market.get("question", "").lower().split() if len(w) > 4)
                     t_words   = set(title_lower.split())
                     overlap   = len(q_words & t_words)

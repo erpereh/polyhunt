@@ -384,6 +384,10 @@ def get_dashboard_data() -> dict:
         # P&L unrealized total
         total_unrealized = sum(float(p.get("unrealized_pnl") or 0) for p in positions)
 
+        # Contar actividad total (sin límite de 50) para bloqueo del input de capital
+        total_trades_count    = (db.table("paper_trades").select("id", count="exact").execute().count or 0)
+        total_positions_count = (db.table("positions").select("market_id", count="exact").execute().count or 0)
+
         return {
             "account":             account,
             "positions":           positions,
@@ -394,6 +398,7 @@ def get_dashboard_data() -> dict:
             "win_rate":            round(win_rate, 1),
             "open_count":          len(positions),
             "total_unrealized_pnl": round(total_unrealized, 2),
+            "has_activity":        (total_trades_count + total_positions_count) > 0,
         }
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error obteniendo datos dashboard: {e}")

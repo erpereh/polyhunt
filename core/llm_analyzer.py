@@ -2,16 +2,21 @@
 Análisis de mercados de predicción con Groq (LLaMA) y Gemini.
 
 Pipeline dual-modelo:
-  1. Groq siempre — análisis rápido
+  1. Groq siempre — análisis rápido (con caché 4h en Supabase)
   2. Gemini solo si gap > 10% — análisis profundo
   3. Si ambos discrepan > 20% entre sí → should_trade = False
+
+Caché inteligente:
+  - Si el mercado fue analizado con Groq hace < 4h, se reutiliza el resultado
+  - Esto reduce las llamadas diarias de ~425 a ~20-30 por ciclo
+  - El límite de 100k tokens/día de llama-3.3-70b-versatile es suficiente
 
 Guarda SIEMPRE el reasoning en Supabase — es el dato más valioso.
 """
 import json
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from groq import Groq
@@ -37,7 +42,7 @@ def _get_gemini():
     global _gemini_model
     if _gemini_model is None:
         genai.configure(api_key=GEMINI_API_KEY)
-        _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
     return _gemini_model
 
 
@@ -112,10 +117,52 @@ def _build_prompt(question: str, description: str, market_price: float,
     )
 
 
+def _get_cached_groq(market_id: str, max_age_hours: int = 4) -> Optional[dict]:
+    """
+    Busca un análisis reciente de Groq (llama-3.3-70b-versatile) en Supabase.
+    Si existe y tiene menos de max_age_hours, lo retorna como dict reutilizable.
+    Retorna None si no hay cache válido o si la consulta falla.
+    """
+    from core.db import get_db
+    db = get_db()
+    try:
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
+        result = (
+            db.table("llm_analyses")
+            .select("probability_yes, probability_range, confidence, resolution_risk, edge_detected, reasoning, timestamp")
+            .eq("market_id", market_id)
+            .eq("model", "groq/llama-3.3-70b-versatile")
+            .gte("timestamp", cutoff)
+            .order("timestamp", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if result.data:
+            row = result.data[0]
+            ts_str = row["timestamp"].replace("Z", "+00:00")
+            age_min = (
+                datetime.now(timezone.utc) - datetime.fromisoformat(ts_str)
+            ).total_seconds() / 60
+            logger.info(
+                f"[{datetime.now()}] Cache hit ({age_min:.0f}min) — reutilizando análisis Groq | {market_id[:16]}…"
+            )
+            return {
+                "probability_yes":  row.get("probability_yes"),
+                "probability_range": row.get("probability_range"),
+                "confidence":       row.get("confidence", "low"),
+                "resolution_risk":  row.get("resolution_risk", "medium"),
+                "edge_detected":    row.get("edge_detected", False),
+                "reasoning":        row.get("reasoning", ""),
+            }
+    except Exception as e:
+        logger.debug(f"[{datetime.now()}] Error consultando cache Groq: {e}")
+    return None
+
+
 def analyze_groq(question: str, description: str, market_price: float,
                  news_articles: list[dict] = None) -> dict:
     """
-    Análisis rápido con Groq (LLaMA-3.3-70B).
+    Análisis rápido con Groq (LLaMA-3.3-70B-Versatile).
     Retorna dict con los campos de análisis, o {} si falla.
     """
     if news_articles is None:
@@ -155,7 +202,7 @@ def analyze_groq(question: str, description: str, market_price: float,
 def analyze_gemini(question: str, description: str, market_price: float,
                    news_articles: list[dict] = None) -> dict:
     """
-    Análisis profundo con Gemini 1.5 Flash.
+    Análisis profundo con Gemini 2.0 Flash.
     Retorna dict con los campos de análisis, o {} si falla.
     """
     if news_articles is None:
@@ -202,7 +249,8 @@ def full_analysis(
     Pipeline de análisis dual-modelo completo.
 
     Lógica:
-      - Groq primero, siempre
+      - Cache primero: si Groq analizó este mercado hace < 4h, reutilizar
+      - Groq si no hay cache
       - Gemini solo si gap LLM-mercado > 10%
       - Si ambos modelos discrepan > 20% entre sí → should_trade = False
       - should_trade = True requiere: gap >= 15%, confianza medium/high, resolution_risk != high
@@ -220,8 +268,13 @@ def full_analysis(
     description = market.get("description", "") or ""
     market_id   = market.get("id", "")
 
-    # ─── GROQ: screening rápido ───────────────────────────────────────────────
-    groq_result = analyze_groq(question, description, market_price, news_articles)
+    # ─── CACHÉ: reusar si analizado hace < 4h ────────────────────────────────
+    groq_result = _get_cached_groq(market_id, max_age_hours=4)
+    cache_hit   = groq_result is not None
+
+    # ─── GROQ: screening rápido (si no hay cache) ────────────────────────────
+    if not cache_hit:
+        groq_result = analyze_groq(question, description, market_price, news_articles)
 
     if not groq_result or groq_result.get("probability_yes") is None:
         logger.warning(f"[{datetime.now()}] Groq falló para {market_id[:16]}… — saltando mercado")
@@ -230,8 +283,9 @@ def full_analysis(
     groq_prob = float(groq_result["probability_yes"])
     gap       = abs(groq_prob - market_price)
 
-    # Guardar análisis de Groq siempre
-    save_llm_analysis(market_id, "groq/llama-3.3-70b", groq_result, market_price, gap)
+    # Guardar análisis de Groq solo si es una llamada real (no cache)
+    if not cache_hit:
+        save_llm_analysis(market_id, "groq/llama-3.3-70b-versatile", groq_result, market_price, gap)
 
     # Si el gap es < 10%, no merece análisis profundo ni trade
     if gap < 0.10:
@@ -240,17 +294,20 @@ def full_analysis(
         )
         return groq_result, None, gap, False
 
+    # ─── Sanity check: precio muy bajo + Groq muy alto → Gemini obligatorio ──
+    suspicious = market_price < 0.03 and groq_prob > 0.40
+
     # ─── GEMINI: análisis profundo ────────────────────────────────────────────
     gemini_result = analyze_gemini(question, description, market_price, news_articles)
 
     if gemini_result and gemini_result.get("probability_yes") is not None:
-        gemini_prob    = float(gemini_result["probability_yes"])
-        gemini_gap     = abs(gemini_prob - market_price)
-        model_diverge  = abs(groq_prob - gemini_prob)
+        gemini_prob   = float(gemini_result["probability_yes"])
+        gemini_gap    = abs(gemini_prob - market_price)
+        model_diverge = abs(groq_prob - gemini_prob)
 
         # Guardar análisis de Gemini
         save_llm_analysis(
-            market_id, "gemini/gemini-1.5-flash",
+            market_id, "gemini/gemini-2.0-flash",
             gemini_result, market_price, gemini_gap,
         )
 
@@ -261,10 +318,27 @@ def full_analysis(
             )
             return groq_result, gemini_result, gap, False
 
+        # Sanity check: Gemini debe confirmar edge si la señal era sospechosa
+        if suspicious and not gemini_result.get("edge_detected", False):
+            logger.warning(
+                f"[{datetime.now()}] Sanity check: precio bajo ({market_price:.1%}) + "
+                f"Groq alto ({groq_prob:.1%}) pero Gemini no confirma edge — rechazado | {question[:50]}"
+            )
+            return groq_result, gemini_result, gap, False
+
         # Usar promedio ponderado (Gemini tiene más contexto)
         avg_prob = (groq_prob + gemini_prob) / 2
         gap      = abs(avg_prob - market_price)
         groq_result["probability_yes"] = round(avg_prob, 4)
+
+    else:
+        # Gemini no respondió — si era señal sospechosa, bloquear por seguridad
+        if suspicious:
+            logger.warning(
+                f"[{datetime.now()}] Sanity check: Gemini no disponible para confirmar "
+                f"señal sospechosa — rechazado | {question[:50]}"
+            )
+            return groq_result, None, gap, False
 
     # ─── Decisión de trading ──────────────────────────────────────────────────
     confidence      = groq_result.get("confidence", "low")
@@ -277,7 +351,7 @@ def full_analysis(
     )
 
     logger.info(
-        f"[{datetime.now()}] Análisis completo — gap={gap:.1%} conf={confidence} "
+        f"[{datetime.now()}] Analisis completo — gap={gap:.1%} conf={confidence} "
         f"risk={resolution_risk} should_trade={should_trade} | {question[:50]}"
     )
 

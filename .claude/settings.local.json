@@ -16,7 +16,15 @@
       "mcp__supabase__list_tables",
       "mcp__supabase__execute_sql",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Bash(timeout 30 python main.py)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(timeout 25 python main.py)",
+      "Bash(timeout 180 python main.py)",
+      "Bash(python -c \":*)",
+      "Bash(tasklist /FI \"PID eq 894\")",
+      "Bash(tasklist /FI \"PID eq 102\")",
+      "Bash(kill 102)"
     ]
   }
 }

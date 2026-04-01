@@ -54,6 +54,27 @@
         <span class="last-update" id="last-update">Cargando…</span>
       </div>
 
+      <!-- ─── Barra de control ────────────────────────────────────────── -->
+      <div class="control-bar">
+        <div class="control-left">
+          <span class="bot-status-badge paused" id="ctrl-status-badge">● PAUSADO</span>
+          <button class="ctrl-btn start" id="btn-start" onclick="botStart()">▶ START</button>
+          <button class="ctrl-btn stop"  id="btn-stop"  onclick="botStop()" disabled>■ STOP</button>
+          <button class="ctrl-btn reset" id="btn-reset" onclick="resetDB()">↺ RESET BD</button>
+        </div>
+        <div class="control-right">
+          <div class="capital-group">
+            <label class="ctrl-label">Capital inicial ($)</label>
+            <div class="capital-input-wrap">
+              <input type="number" id="capital-input" placeholder="10,000" min="100" max="1000000">
+              <span class="capital-lock hidden" id="capital-lock">🔒</span>
+            </div>
+            <button class="ctrl-btn apply" id="btn-capital" onclick="applyCapital()">Aplicar</button>
+          </div>
+          <span class="ctrl-last-cycle" id="ctrl-last-cycle">Último ciclo: —</span>
+        </div>
+      </div>
+
       <!-- ── Overview ─────────────────────────────────────────────────── -->
       <section id="section-overview">
 
@@ -198,6 +219,17 @@
           </div>
         </div>
       </section>
+
+      <!-- ─── Consola del bot ─────────────────────────────────────────── -->
+      <div class="section console-section">
+        <div class="section-header console-header" onclick="toggleConsole()">
+          <span class="section-title">Log del bot</span>
+          <span class="console-toggle" id="console-toggle">▼</span>
+        </div>
+        <div class="console-body" id="console-body">
+          <div class="console-output" id="console-output">Esperando logs…</div>
+        </div>
+      </div>
 
     </main>
   </div>
