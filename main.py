@@ -45,7 +45,8 @@ from core.paper_trader   import (
     update_unrealized_pnl,
     check_stop_losses,
 )
-from server import app, set_bot_status, _run_event
+from core.state import run_event
+from server import app, set_bot_status
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 
@@ -382,7 +383,7 @@ def main() -> None:
     while not _stop_event.is_set():
         # Bloquear mientras el bot está pausado.
         # Timeout de 5s para poder chequear _stop_event periódicamente.
-        if not _run_event.wait(timeout=5.0):
+        if not run_event.wait(timeout=5.0):
             continue
         if _stop_event.is_set():
             break

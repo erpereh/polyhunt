@@ -452,25 +452,52 @@ async function botStop() {
 }
 
 async function resetDB() {
-  const raw = prompt("¿Con cuánto capital quieres empezar?\n\nMínimo: $100", "10000");
-  if (raw === null) return;
-  const amount = parseFloat(raw);
-  if (!amount || amount < 100) {
-    alert("Valor inválido. Mínimo $100.");
+  // 1. Verificar estado del bot ANTES de cualquier prompt
+  let status;
+  try {
+    status = await fetch('/api/status').then(r => r.json());
+  } catch(e) {
+    alert('Error al verificar el estado del bot.');
     return;
   }
+
+  if (status.running) {
+    alert('⚠️ El bot está activo.\nPulsa STOP y espera a que termine el ciclo antes de resetear.');
+    return;
+  }
+
+  // 2. Pedir capital
+  const raw = prompt('¿Con cuánto capital quieres empezar?\n\nMínimo: $100', '10000');
+  if (raw === null) return;
+
+  const amount = parseFloat(raw);
+  if (isNaN(amount) || amount < 100) {
+    alert('Valor inválido. Mínimo $100.');
+    return;
+  }
+
+  // 3. Confirmar reset
   if (!confirm(`¿Seguro? Esto borrará TODOS los datos.\nCapital inicial: $${amount.toLocaleString()}`)) return;
-  const r = await fetch('/api/reset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ balance: amount }),
-  });
-  const d = await r.json();
-  if (r.ok) {
-    alert('BD reseteada correctamente.');
+
+  // 4. Ejecutar reset
+  try {
+    const res = await fetch('/api/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ balance: amount })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert('Error: ' + (data.error || 'No se pudo resetear.'));
+      return;
+    }
+
     updateBotStatusUI(false);
-    refresh();
-  } else alert('Error: ' + (d.error || 'desconocido'));
+    await refresh();
+  } catch(e) {
+    alert('Error de conexión al resetear.');
+  }
 }
 
 

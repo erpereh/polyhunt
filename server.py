@@ -13,12 +13,12 @@ Rutas:
 """
 import logging
 import os
-import threading
 
 from flask import Flask, jsonify, request, send_from_directory
 
 from core.db import get_db
 from core.paper_trader import get_dashboard_data
+from core.state import run_event
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +31,6 @@ bot_status: dict = {
     "markets_scanned": 0,
     "trades_open":     0,
 }
-
-# Evento de control de pausa — clear=pausado (por defecto), set=activo
-# Compartido con main.py que lo importa directamente.
-_run_event = threading.Event()
 
 app = Flask(__name__)
 
@@ -82,7 +78,7 @@ def status():
 @app.route("/api/bot/start", methods=["POST"])
 def bot_start():
     """Activa el bot. Empieza a ejecutar ciclos en el próximo tick."""
-    _run_event.set()
+    run_event.set()
     bot_status["running"] = True
     logger.info("[API] Bot activado desde el dashboard")
     return jsonify({"ok": True, "status": "running"})
@@ -91,7 +87,7 @@ def bot_start():
 @app.route("/api/bot/stop", methods=["POST"])
 def bot_stop():
     """Pausa el bot. El ciclo en curso termina limpiamente; no se inicia el siguiente."""
-    _run_event.clear()
+    run_event.clear()
     bot_status["running"] = False
     logger.info("[API] Bot pausado desde el dashboard")
     return jsonify({"ok": True, "status": "paused"})
@@ -103,13 +99,11 @@ def bot_stop():
 def reset_db():
     """
     Borra TODOS los datos de Supabase y reinicia el balance.
-    Fuerza el bot a PAUSADO antes de operar — nunca lo activa tras el reset.
+    Requiere que el bot esté PAUSADO — bloquea si está activo.
     Body JSON opcional: {"balance": 10000}
     """
-    # Forzar pausa ANTES de tocar la BD — evita escrituras concurrentes
-    _run_event.clear()
-    bot_status["running"] = False
-    logger.info("[Reset] Bot forzado a PAUSADO para reset de BD")
+    if bot_status.get("running", False):
+        return jsonify({"error": "El bot está activo. Pulsa STOP y espera a que termine el ciclo antes de resetear."}), 400
 
     data            = request.get_json(silent=True) or {}
     initial_balance = float(data.get("balance", 10000.0))
