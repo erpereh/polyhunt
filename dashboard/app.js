@@ -1,13 +1,18 @@
-/* ─── Estado global ─────────────────────────────────────────────────────────── */
-let lastData   = null;
+/* ═══════════════════════════════════════════════════════════════════════════
+   POLYHUNT — Dashboard Application Logic
+   Glass Morphism Edition — Spanish UI
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── State ─────────────────────────────────────────────────────────────────── */
+let lastData = null;
 let currentSection = 'overview';
 
-/* ─── Helpers de formato ────────────────────────────────────────────────────── */
+/* ─── Format Helpers ────────────────────────────────────────────────────────── */
 const fmt = {
   usd: n => {
     const v = parseFloat(n);
     if (isNaN(v)) return '$—';
-    return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return '$' + v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   },
 
   pct: n => {
@@ -45,7 +50,7 @@ const fmt = {
     if (!iso) return '—';
     try {
       return new Date(iso).toLocaleDateString('es-ES', {
-        day: '2-digit', month: '2-digit', year: '2-digit',
+        day: '2-digit', month: 'short', year: '2-digit',
         hour: '2-digit', minute: '2-digit',
       });
     } catch { return iso.slice(0, 16); }
@@ -55,46 +60,43 @@ const fmt = {
     if (!iso) return '—';
     try {
       return new Date(iso).toLocaleDateString('es-ES', {
-        day: '2-digit', month: '2-digit',
+        day: '2-digit', month: 'short',
         hour: '2-digit', minute: '2-digit',
       });
     } catch { return iso.slice(0, 16); }
   },
 };
 
-/* ─── Navegación ────────────────────────────────────────────────────────────── */
+/* ─── Navigation ────────────────────────────────────────────────────────────── */
 function showSection(name) {
-  // Ocultar todas las secciones
+  // Hide all sections
   document.querySelectorAll('section[id^="section-"]').forEach(s => s.classList.add('hidden'));
-  // Mostrar la seleccionada
+  
+  // Show selected
   const el = document.getElementById(`section-${name}`);
-  if (el) el.classList.remove('hidden');
+  if (el) {
+    el.classList.remove('hidden');
+    // Add fade animation
+    el.querySelectorAll('.glass-card, .kpi-card').forEach((card, i) => {
+      card.style.animationDelay = `${i * 0.05}s`;
+    });
+  }
 
-  // Actualizar nav activo
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.section === name);
+  // Update nav tabs
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.section === name);
   });
 
-  // Actualizar título
-  const titles = {
-    overview:  'Overview',
-    positions: 'Posiciones abiertas',
-    trades:    'Historial de trades',
-    markets:   'Mercados rastreados',
-    analyses:  'Análisis LLM',
-    news:      'Noticias procesadas',
-  };
-  document.getElementById('page-title').textContent = titles[name] || name;
   currentSection = name;
 }
 
-/* ─── Actualizar número con fade ────────────────────────────────────────────── */
+/* ─── Value Update with Animation ───────────────────────────────────────────── */
 function setWithFade(el, value) {
   if (!el) return;
   if (el.textContent !== String(value)) {
     el.textContent = value;
     el.classList.remove('fade-update');
-    void el.offsetWidth; // reflow para reiniciar animación
+    void el.offsetWidth;
     el.classList.add('fade-update');
   }
 }
@@ -110,17 +112,17 @@ function renderKPIs(data) {
   // Balance
   setWithFade(document.getElementById('kpi-balance'), fmt.usd(balance));
 
-  // Total P&L con delta
+  // Total P&L
   const pnlEl = document.getElementById('kpi-total-pnl');
   if (pnlEl) {
     pnlEl.textContent = fmt.pnl(totalPnl);
-    pnlEl.className = 'kpi-value ' + fmt.pnlClass(totalPnl);
   }
+  
   const pnlDeltaEl = document.getElementById('kpi-pnl-delta');
   if (pnlDeltaEl) {
     const initialBalance = parseFloat(account.initial_balance || 10000);
     const pct = initialBalance > 0 ? ((balance - initialBalance) / initialBalance * 100).toFixed(1) : '0.0';
-    pnlDeltaEl.textContent = `${pct >= 0 ? '+' : ''}${pct}% desde el inicio`;
+    pnlDeltaEl.textContent = `${pct >= 0 ? '+' : ''}${pct}% desde inicio`;
     pnlDeltaEl.className = 'kpi-delta ' + (totalPnl >= 0 ? 'up' : 'down');
   }
 
@@ -128,28 +130,28 @@ function renderKPIs(data) {
   const unrEl = document.getElementById('kpi-unrealized');
   if (unrEl) {
     unrEl.textContent = fmt.pnl(unrealized);
-    unrEl.className = 'kpi-value ' + fmt.pnlClass(unrealized);
   }
+  
   const openEl = document.getElementById('kpi-open-count');
   if (openEl) {
-    openEl.textContent = `${data.open_count || 0} posiciones abiertas`;
+    const count = data.open_count || 0;
+    openEl.textContent = `${count} ${count === 1 ? 'posición abierta' : 'posiciones abiertas'}`;
   }
 
   // Win Rate
   setWithFade(document.getElementById('kpi-winrate'), `${winRate.toFixed(1)}%`);
+  
   const closedTrades = (data.trades || []).filter(t => t.status === 'closed');
   const tradeCountEl = document.getElementById('kpi-trade-count');
   if (tradeCountEl) {
-    tradeCountEl.textContent = `${closedTrades.length} trades cerrados`;
+    tradeCountEl.textContent = `${closedTrades.length} ${closedTrades.length === 1 ? 'trade cerrado' : 'trades cerrados'}`;
   }
-
 }
 
-/* ─── Render Posiciones ─────────────────────────────────────────────────────── */
+/* ─── Render Positions ──────────────────────────────────────────────────────── */
 function renderPositions(positions) {
   const count = positions ? positions.length : 0;
 
-  // Actualizar contadores en todos los contextos
   ['positions-count', 'overview-pos-count'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = count;
@@ -160,12 +162,12 @@ function renderPositions(positions) {
       <thead>
         <tr>
           <th>Mercado</th>
-          <th>Dir.</th>
+          <th>Dirección</th>
           <th class="num">Entrada</th>
-          <th class="num">Precio actual</th>
+          <th class="num">Actual</th>
           <th class="num">Tamaño</th>
-          <th class="num">No realizado</th>
-          <th>Abierto</th>
+          <th class="num">No Realizado</th>
+          <th>Apertura</th>
         </tr>
       </thead>
       <tbody>
@@ -209,7 +211,7 @@ function renderTrades(trades) {
   if (count === 0) {
     body.innerHTML = `<div class="empty-state">
       <div class="empty-state-icon">⟳</div>
-      <div class="empty-state-title">Sin trades registrados</div>
+      <div class="empty-state-title">Sin operaciones registradas</div>
       <div class="empty-state-desc">El historial completo de operaciones aparecerá aquí.</div>
     </div>`;
     return;
@@ -225,24 +227,25 @@ function renderTrades(trades) {
           <th class="num">Entrada</th>
           <th class="num">Salida</th>
           <th class="num">Tamaño</th>
-          <th class="num">P&amp;L</th>
+          <th class="num">P&L</th>
           <th>Estado</th>
-          <th>Abierto</th>
+          <th>Fecha</th>
         </tr>
       </thead>
       <tbody>
         ${trades.map(t => {
           const question = t.markets?.question || t.market_id || '—';
           const pnl = t.pnl != null ? parseFloat(t.pnl) : null;
+          const statusText = t.status === 'closed' ? 'cerrado' : 'abierto';
           return `<tr>
-            <td class="mono" style="color:var(--text-secondary)">#${t.id}</td>
+            <td class="mono">#${t.id}</td>
             <td><div class="market-question" title="${question}">${question}</div></td>
             <td><span class="direction-badge ${(t.direction || '').toLowerCase()}">${t.direction || '—'}</span></td>
             <td class="num">${fmt.pct(t.entry_price)}</td>
             <td class="num">${t.exit_price != null ? fmt.pct(t.exit_price) : '—'}</td>
             <td class="num">${fmt.usd(t.size_usd)}</td>
             <td class="num">${pnl != null ? `<span class="${fmt.pnlClass(pnl)}">${fmt.pnl(pnl)}</span>` : '—'}</td>
-            <td><span class="status-badge ${t.status || 'open'}">${t.status || 'open'}</span></td>
+            <td><span class="status-badge ${t.status || 'open'}">${statusText}</span></td>
             <td class="mono">${fmt.dateShort(t.opened_at)}</td>
           </tr>`;
         }).join('')}
@@ -250,7 +253,7 @@ function renderTrades(trades) {
     </table>`;
 }
 
-/* ─── Render Mercados ───────────────────────────────────────────────────────── */
+/* ─── Render Markets ────────────────────────────────────────────────────────── */
 function renderMarkets(markets, analyses) {
   const count = markets ? markets.length : 0;
   const el = document.getElementById('markets-count');
@@ -263,12 +266,11 @@ function renderMarkets(markets, analyses) {
     body.innerHTML = `<div class="empty-state">
       <div class="empty-state-icon">◫</div>
       <div class="empty-state-title">Sin mercados escaneados</div>
-      <div class="empty-state-desc">El escáner detectará mercados políticos de Polymarket en el próximo ciclo.</div>
+      <div class="empty-state-desc">El escáner detectará mercados políticos en el próximo ciclo.</div>
     </div>`;
     return;
   }
 
-  // Crear mapa de último análisis por mercado para mostrar gap
   const analysisMap = {};
   if (analyses) {
     analyses.forEach(a => {
@@ -284,7 +286,7 @@ function renderMarkets(markets, analyses) {
           <th class="num">Precio YES</th>
           <th class="num">Volumen</th>
           <th>Gap LLM</th>
-          <th>Cierre</th>
+          <th>Cierra</th>
           <th>Actualizado</th>
         </tr>
       </thead>
@@ -296,7 +298,7 @@ function renderMarkets(markets, analyses) {
             <td><div class="market-question" title="${m.question}">${m.question}</div></td>
             <td class="num">${m.last_price != null ? fmt.pct(m.last_price) : '—'}</td>
             <td class="num">$${m.volume ? (parseFloat(m.volume) / 1000).toFixed(0) + 'K' : '—'}</td>
-            <td>${gap != null ? fmt.gapBadge(gap) : '<span style="color:var(--text-muted)">—</span>'}</td>
+            <td>${gap != null ? fmt.gapBadge(gap) : '<span class="gap-badge low">—</span>'}</td>
             <td class="mono">${fmt.dateShort(m.end_date)}</td>
             <td class="mono">${fmt.dateShort(m.updated_at)}</td>
           </tr>`;
@@ -305,7 +307,7 @@ function renderMarkets(markets, analyses) {
     </table>`;
 }
 
-/* ─── Render Análisis LLM ───────────────────────────────────────────────────── */
+/* ─── Render Analyses ───────────────────────────────────────────────────────── */
 function renderAnalyses(analyses) {
   const count = analyses ? analyses.length : 0;
   const el = document.getElementById('analyses-count');
@@ -318,7 +320,7 @@ function renderAnalyses(analyses) {
     body.innerHTML = `<div class="empty-state">
       <div class="empty-state-icon">◉</div>
       <div class="empty-state-title">Sin análisis registrados</div>
-      <div class="empty-state-desc">Los análisis de Groq y Gemini se guardan aquí para calibración posterior.</div>
+      <div class="empty-state-desc">Los análisis de Groq y Gemini se almacenan aquí para calibración futura.</div>
     </div>`;
     return;
   }
@@ -329,11 +331,11 @@ function renderAnalyses(analyses) {
         <tr>
           <th>Modelo</th>
           <th>Mercado</th>
-          <th class="num">Precio mkt</th>
-          <th class="num">Prob. LLM</th>
+          <th class="num">Precio Mercado</th>
+          <th class="num">Prob LLM</th>
           <th>Gap</th>
           <th>Confianza</th>
-          <th class="num">Edge</th>
+          <th>Edge</th>
           <th>Razonamiento</th>
           <th>Fecha</th>
         </tr>
@@ -344,15 +346,15 @@ function renderAnalyses(analyses) {
           const shortId = mid.length > 12 ? mid.slice(0, 12) + '…' : mid;
           return `<tr>
             <td><span class="model-badge">${(a.model || '—').split('/')[1] || a.model}</span></td>
-            <td><span class="mono" title="${mid}" style="color:var(--text-secondary)">${shortId}</span></td>
+            <td><span class="mono truncate" title="${mid}">${shortId}</span></td>
             <td class="num">${a.market_price_at_analysis != null ? fmt.pct(a.market_price_at_analysis) : '—'}</td>
             <td class="num">${a.probability_yes != null ? fmt.pct(a.probability_yes) : '—'}</td>
             <td>${a.gap != null ? fmt.gapBadge(a.gap) : '—'}</td>
             <td>${a.confidence ? fmt.confidence(a.confidence) : '—'}</td>
-            <td class="num" style="color:${a.edge_detected ? 'var(--green)' : 'var(--text-secondary)'}">
+            <td style="color: ${a.edge_detected ? 'var(--accent)' : 'var(--text-muted)'}">
               ${a.edge_detected ? '✓' : '—'}
             </td>
-            <td><div class="reasoning-text" title="${a.reasoning || ''}">${a.reasoning || '—'}</div></td>
+            <td><div class="truncate" title="${a.reasoning || ''}">${a.reasoning || '—'}</div></td>
             <td class="mono">${fmt.dateShort(a.timestamp)}</td>
           </tr>`;
         }).join('')}
@@ -360,9 +362,10 @@ function renderAnalyses(analyses) {
     </table>`;
 }
 
-/* ─── Render Noticias ───────────────────────────────────────────────────────── */
+/* ─── Render News ───────────────────────────────────────────────────────────── */
 function renderNews(news) {
   const count = news ? news.length : 0;
+  
   ['news-count', 'overview-news-count'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = count;
@@ -371,7 +374,7 @@ function renderNews(news) {
   const emptyHTML = `<div class="empty-state">
     <div class="empty-state-icon">◌</div>
     <div class="empty-state-title">Sin noticias procesadas</div>
-    <div class="empty-state-desc">El monitor RSS procesará noticias con score de relevancia ≥ 0.3.</div>
+    <div class="empty-state-desc">El monitor RSS procesa noticias con relevancia ≥ 0.3.</div>
   </div>`;
 
   const newsHTML = count === 0 ? emptyHTML : `
@@ -399,15 +402,15 @@ function renderNews(news) {
   });
 }
 
-/* ─── Fetch y refresco principal ────────────────────────────────────────────── */
+/* ─── Main Refresh ──────────────────────────────────────────────────────────── */
 async function refresh() {
   try {
-    const res  = await fetch('/api/dashboard');
+    const res = await fetch('/api/dashboard');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
     if (data.error) {
-      console.error('[PolyHunt] API error:', data.error);
+      console.error('[PolyHunt] Error de API:', data.error);
       return;
     }
 
@@ -421,26 +424,15 @@ async function refresh() {
     renderNews(data.news || []);
 
     document.getElementById('last-update').textContent =
-      'Actualizado ' + new Date().toLocaleTimeString('es-ES');
-
-    // Indicar que el bot está activo
-    const dot = document.getElementById('status-dot');
-    if (dot) { dot.className = 'status-dot active'; }
-    const statusText = document.getElementById('bot-status-text');
-    if (statusText) { statusText.textContent = 'Bot activo'; }
+      'Actualizado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
   } catch (err) {
-    console.error('[PolyHunt] Error al recargar:', err);
-    const dot = document.getElementById('status-dot');
-    if (dot) { dot.className = 'status-dot paused'; }
-    const statusText = document.getElementById('bot-status-text');
-    if (statusText) { statusText.textContent = 'Sin conexión'; }
+    console.error('[PolyHunt] Error de actualización:', err);
     document.getElementById('last-update').textContent = 'Error de conexión';
   }
 }
 
-/* ─── Controles del bot ─────────────────────────────────────────────────────── */
-
+/* ─── Bot Controls ──────────────────────────────────────────────────────────── */
 async function botStart() {
   const r = await fetch('/api/bot/start', { method: 'POST' });
   if (r.ok) updateBotStatusUI('running');
@@ -452,35 +444,30 @@ async function botStop() {
 }
 
 async function resetDB() {
-  // 1. Verificar estado del bot ANTES de cualquier prompt
   let status;
   try {
     status = await fetch('/api/status').then(r => r.json());
-  } catch(e) {
-    alert('Error al verificar el estado del bot.');
+  } catch (e) {
+    alert('Error al verificar estado del bot.');
     return;
   }
 
-  // Bloquear si no está completamente pausado
   if (status.status !== 'paused') {
-    alert('⚠️ El bot debe estar completamente pausado.\nEspera a que el estado sea PAUSADO antes de resetear.');
+    alert('El bot debe estar completamente pausado antes de reiniciar.\nEspera a que el estado muestre PAUSADO.');
     return;
   }
 
-  // 2. Pedir capital
-  const raw = prompt('¿Con cuánto capital quieres empezar?\n\nMínimo: $100', '10000');
+  const raw = prompt('Introduce el capital inicial:\n\nMínimo: $100', '10000');
   if (raw === null) return;
 
   const amount = parseFloat(raw);
   if (isNaN(amount) || amount < 100) {
-    alert('Valor inválido. Mínimo $100.');
+    alert('Cantidad inválida. Mínimo $100.');
     return;
   }
 
-  // 3. Confirmar reset
-  if (!confirm(`¿Seguro? Esto borrará TODOS los datos.\nCapital inicial: $${amount.toLocaleString()}`)) return;
+  if (!confirm(`¿Reiniciar TODOS los datos?\nCapital inicial: $${amount.toLocaleString('es-ES')}`)) return;
 
-  // 4. Ejecutar reset
   try {
     const res = await fetch('/api/reset', {
       method: 'POST',
@@ -490,49 +477,57 @@ async function resetDB() {
     const data = await res.json();
 
     if (!res.ok) {
-      alert('Error: ' + (data.error || 'No se pudo resetear.'));
+      alert('Error: ' + (data.error || 'Reinicio fallido.'));
       return;
     }
 
     updateBotStatusUI('paused');
     await refresh();
-  } catch(e) {
-    alert('Error de conexión al resetear.');
+  } catch (e) {
+    alert('Error de conexión durante el reinicio.');
   }
 }
 
-
 function updateBotStatusUI(status) {
-  const badge    = document.getElementById('ctrl-status-badge');
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
   const btnStart = document.getElementById('btn-start');
-  const btnStop  = document.getElementById('btn-stop');
+  const btnStop = document.getElementById('btn-stop');
   const btnReset = document.getElementById('btn-reset');
-  if (!badge) return;
+
+  const statusLabels = {
+    running: 'ACTIVO',
+    stopping: 'DETENIENDO',
+    paused: 'PAUSADO'
+  };
+
+  if (dot) {
+    dot.className = 'status-dot ' + status;
+  }
+
+  if (text) {
+    text.className = 'status-text ' + status;
+    text.textContent = statusLabels[status] || status.toUpperCase();
+  }
 
   if (status === 'running') {
-    badge.textContent = '● ACTIVO';
-    badge.className   = 'bot-status-badge running';
     if (btnStart) btnStart.disabled = true;
-    if (btnStop)  btnStop.disabled  = false;
+    if (btnStop) btnStop.disabled = false;
     if (btnReset) btnReset.style.display = 'none';
   } else if (status === 'stopping') {
-    badge.textContent = '● PARANDO...';
-    badge.className   = 'bot-status-badge stopping';
     if (btnStart) btnStart.disabled = true;
-    if (btnStop)  btnStop.disabled  = true;
+    if (btnStop) btnStop.disabled = true;
     if (btnReset) btnReset.style.display = 'none';
-  } else { // paused
-    badge.textContent = '● PAUSADO';
-    badge.className   = 'bot-status-badge paused';
+  } else {
     if (btnStart) btnStart.disabled = false;
-    if (btnStop)  btnStop.disabled  = true;
+    if (btnStop) btnStop.disabled = true;
     if (btnReset) btnReset.style.display = '';
   }
 }
 
-
+/* ─── Console ───────────────────────────────────────────────────────────────── */
 function toggleConsole() {
-  const body   = document.getElementById('console-body');
+  const body = document.getElementById('console-body');
   const toggle = document.getElementById('console-toggle');
   if (!body || !toggle) return;
   const collapsed = body.classList.toggle('collapsed');
@@ -545,50 +540,48 @@ async function clearLogs() {
     const res = await fetch('/api/logs/clear', { method: 'POST' });
     if (res.ok) {
       const out = document.getElementById('console-output');
-      if (out) out.textContent = 'Logs borrados.';
+      if (out) out.textContent = 'Logs limpiados.';
     }
   } catch (e) {
-    console.error('[PolyHunt] Error clearing logs:', e);
+    console.error('[PolyHunt] Error al limpiar logs:', e);
   }
 }
 
-/* ─── Inicialización ────────────────────────────────────────────────────────── */
-refresh();
-setInterval(refresh, 60_000); // refresco cada 60 segundos
-
-// Poll de estado del bot cada 5s (ligero, sin datos pesados)
+/* ─── Status Polling ────────────────────────────────────────────────────────── */
 async function refreshStatus() {
   try {
     const d = await fetch('/api/status').then(r => r.json());
-    // Usar el campo 'status' que ahora devuelve running/stopping/paused
     updateBotStatusUI(d.status || (d.running ? 'running' : 'paused'));
-    if (d.last_cycle) {
-      const el = document.getElementById('ctrl-last-cycle');
-      if (el) el.textContent = 'Último ciclo: ' + new Date(d.last_cycle).toLocaleTimeString('es-ES');
-    }
   } catch (_) {}
 }
-refreshStatus();
-setInterval(refreshStatus, 5000);
 
-// Poll de logs cada 5s
+/* ─── Log Polling ───────────────────────────────────────────────────────────── */
 let _consolePinned = true;
+
 async function refreshLogs() {
   try {
-    const d   = await fetch('/api/logs').then(r => r.json());
+    const d = await fetch('/api/logs').then(r => r.json());
     const out = document.getElementById('console-output');
     if (!out) return;
-    out.textContent = (d.lines || []).join('\n');
+    out.textContent = (d.lines || []).join('\n') || 'Sin logs todavía...';
     if (_consolePinned) out.scrollTop = out.scrollHeight;
   } catch (_) {}
 }
-refreshLogs();
-setInterval(refreshLogs, 5000);
 
-// Detectar scroll manual en la consola para desactivar auto-scroll
-const _consoleOut = document.getElementById('console-output');
-if (_consoleOut) {
-  _consoleOut.addEventListener('scroll', function () {
-    _consolePinned = this.scrollTop + this.clientHeight >= this.scrollHeight - 20;
-  });
-}
+/* ─── Initialize ────────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  refresh();
+  refreshStatus();
+  refreshLogs();
+
+  setInterval(refresh, 60_000);
+  setInterval(refreshStatus, 5_000);
+  setInterval(refreshLogs, 5_000);
+
+  const consoleOut = document.getElementById('console-output');
+  if (consoleOut) {
+    consoleOut.addEventListener('scroll', function () {
+      _consolePinned = this.scrollTop + this.clientHeight >= this.scrollHeight - 20;
+    });
+  }
+});

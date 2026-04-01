@@ -1,9 +1,5 @@
-Eres un diseñador UI/UX y desarrollador frontend visionario. Quiero que rediseñes por completo el dashboard de mi bot de trading llamado "PolyHunt". 
+Preparame las instrucciones para poder desplegar la pagina y bot en railway. Y lo que sea necesario para que funcione correctamente y no se pare nunca.
 
-Tienes **LIBERTAD CREATIVA TOTAL**. Ignora cómo está hecho ahora mismo. Toma tus propias decisiones sobre la paleta de colores, tipografías, disposición visual, estilos globales y arquitectura. Sorpréndeme con un diseño espectacular, vanguardista, premium y que sea 100% responsive. Hazlo como tú consideres que se vería el mejor SaaS del mercado.
+Adapta lo que necesites para poder subirlo a railway. El commit y pull lo hago yo.
 
-La única regla es que no puedes eliminar las funcionalidades actuales.
-
-No me des explicaciones, simplemente genera todo el código necesario (componentes y estilos) para implementar tu visión.
-
-Tambien quiero que uses las skills de diseño en .claude/skills para que puedas crear un diseño espectacular.
+Añade al gitignore lo que sea necesario.
