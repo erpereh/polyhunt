@@ -1,0 +1,10 @@
+Todas estas traces no me gusta que salgan en la terminal, solo quiero que salgan los errores, o cosas que si que me den informacion valiosa, estos logs son repetitivos y salen todo el rato en grandes cantidades, dejame unos logs buenos.
+
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/account?select=%2A&id=eq.1 "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/positions?select=%2A%2C%20markets%28question%29 "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/paper_trades?select=%2A%2C%20markets%28question%29&order=opened_at.desc&limit=50 "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/markets?select=%2A&order=updated_at.desc&limit=20 "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/news_articles?select=%2A&order=processed_at.desc&limit=10 "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/llm_analyses?select=%2A&order=timestamp.desc&limit=30 "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/paper_trades?select=id "HTTP/2 200 OK"
+2026-04-01 19:57:36 [INFO] httpx — HTTP Request: GET https://dndliiwxudccnkpsbtou.supabase.co/rest/v1/positions?select=market_id "HTTP/2 200 OK"

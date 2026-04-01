@@ -45,7 +45,7 @@ from core.paper_trader   import (
     update_unrealized_pnl,
     check_stop_losses,
 )
-from core.state import run_event
+from core.state import run_event, stop_requested
 from server import app, set_bot_status
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
@@ -55,6 +55,12 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+# Silenciar loggers ruidosos que generan spam de requests HTTP
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("hpack").setLevel(logging.WARNING)
+
 # FileHandler: escribe en polyhunt.log para que /api/logs pueda leerlo
 _log_file = os.path.join(os.path.dirname(__file__), "polyhunt.log")
 _fh = logging.FileHandler(_log_file, encoding="utf-8")
@@ -384,6 +390,11 @@ def main() -> None:
         # Bloquear mientras el bot está pausado.
         # Timeout de 5s para poder chequear _stop_event periódicamente.
         if not run_event.wait(timeout=5.0):
+            # Si stop_requested estaba activo y run_event sigue limpio, limpiar stop_requested
+            if stop_requested.is_set():
+                stop_requested.clear()
+                set_bot_status(running=False)
+                logger.info("[PolyHunt] Ciclo terminado — bot pausado como se solicitó")
             continue
         if _stop_event.is_set():
             break
@@ -393,6 +404,12 @@ def main() -> None:
             run_cycle(cycle)
         except Exception as e:
             logger.error(f"[main] Error inesperado en ciclo #{cycle}: {e}", exc_info=True)
+
+        # Si se solicitó stop durante el ciclo, marcar como completamente pausado
+        if stop_requested.is_set():
+            stop_requested.clear()
+            set_bot_status(running=False)
+            logger.info("[PolyHunt] Ciclo terminado — bot pausado como se solicitó")
 
         # Esperar hasta el próximo ciclo o hasta que se reciba señal de parada
         _stop_event.wait(timeout=CYCLE_SECONDS)

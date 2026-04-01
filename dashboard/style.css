@@ -662,6 +662,17 @@ a { text-decoration: none; cursor: pointer; }
   border-color: var(--border);
 }
 
+.bot-status-badge.stopping {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+.status-dot.stopping {
+  background: var(--warning);
+  animation: pulse 1s ease infinite;
+}
+
 .ctrl-btn {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -700,6 +711,11 @@ a { text-decoration: none; cursor: pointer; }
 .console-section { margin-top: 20px; }
 
 .console-header { cursor: pointer; user-select: none; }
+.console-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .console-toggle {
   font-size: 11px;
   color: var(--text-secondary);
@@ -707,6 +723,29 @@ a { text-decoration: none; cursor: pointer; }
   display: inline-block;
 }
 .console-toggle.collapsed { transform: rotate(-90deg); }
+
+/* Botón pequeño para consola */
+.ctrl-btn-sm {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  background: transparent;
+}
+.ctrl-btn-sm:hover { opacity: 0.85; }
+.ctrl-btn-sm.clear {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+.ctrl-btn-sm.clear:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-hover);
+}
 
 .console-body {
   overflow: hidden;

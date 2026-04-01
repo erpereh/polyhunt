@@ -443,12 +443,12 @@ async function refresh() {
 
 async function botStart() {
   const r = await fetch('/api/bot/start', { method: 'POST' });
-  if (r.ok) updateBotStatusUI(true);
+  if (r.ok) updateBotStatusUI('running');
 }
 
 async function botStop() {
   const r = await fetch('/api/bot/stop', { method: 'POST' });
-  if (r.ok) updateBotStatusUI(false);
+  if (r.ok) updateBotStatusUI('stopping');
 }
 
 async function resetDB() {
@@ -461,8 +461,9 @@ async function resetDB() {
     return;
   }
 
-  if (status.running) {
-    alert('⚠️ El bot está activo.\nPulsa STOP y espera a que termine el ciclo antes de resetear.');
+  // Bloquear si no está completamente pausado
+  if (status.status !== 'paused') {
+    alert('⚠️ El bot debe estar completamente pausado.\nEspera a que el estado sea PAUSADO antes de resetear.');
     return;
   }
 
@@ -493,7 +494,7 @@ async function resetDB() {
       return;
     }
 
-    updateBotStatusUI(false);
+    updateBotStatusUI('paused');
     await refresh();
   } catch(e) {
     alert('Error de conexión al resetear.');
@@ -501,19 +502,32 @@ async function resetDB() {
 }
 
 
-function updateBotStatusUI(isRunning) {
+function updateBotStatusUI(status) {
   const badge    = document.getElementById('ctrl-status-badge');
   const btnStart = document.getElementById('btn-start');
   const btnStop  = document.getElementById('btn-stop');
   const btnReset = document.getElementById('btn-reset');
   if (!badge) return;
 
-  badge.textContent = isRunning ? '● ACTIVO' : '● PAUSADO';
-  badge.className   = 'bot-status-badge ' + (isRunning ? 'running' : 'paused');
-  if (btnStart) btnStart.disabled = isRunning;
-  if (btnStop)  btnStop.disabled  = !isRunning;
-  // Botón reset solo visible cuando el bot está pausado
-  if (btnReset) btnReset.style.display = isRunning ? 'none' : '';
+  if (status === 'running') {
+    badge.textContent = '● ACTIVO';
+    badge.className   = 'bot-status-badge running';
+    if (btnStart) btnStart.disabled = true;
+    if (btnStop)  btnStop.disabled  = false;
+    if (btnReset) btnReset.style.display = 'none';
+  } else if (status === 'stopping') {
+    badge.textContent = '● PARANDO...';
+    badge.className   = 'bot-status-badge stopping';
+    if (btnStart) btnStart.disabled = true;
+    if (btnStop)  btnStop.disabled  = true;
+    if (btnReset) btnReset.style.display = 'none';
+  } else { // paused
+    badge.textContent = '● PAUSADO';
+    badge.className   = 'bot-status-badge paused';
+    if (btnStart) btnStart.disabled = false;
+    if (btnStop)  btnStop.disabled  = true;
+    if (btnReset) btnReset.style.display = '';
+  }
 }
 
 
@@ -526,6 +540,18 @@ function toggleConsole() {
   toggle.textContent = collapsed ? '▶' : '▼';
 }
 
+async function clearLogs() {
+  try {
+    const res = await fetch('/api/logs/clear', { method: 'POST' });
+    if (res.ok) {
+      const out = document.getElementById('console-output');
+      if (out) out.textContent = 'Logs borrados.';
+    }
+  } catch (e) {
+    console.error('[PolyHunt] Error clearing logs:', e);
+  }
+}
+
 /* ─── Inicialización ────────────────────────────────────────────────────────── */
 refresh();
 setInterval(refresh, 60_000); // refresco cada 60 segundos
@@ -534,7 +560,8 @@ setInterval(refresh, 60_000); // refresco cada 60 segundos
 async function refreshStatus() {
   try {
     const d = await fetch('/api/status').then(r => r.json());
-    updateBotStatusUI(d.running === true);
+    // Usar el campo 'status' que ahora devuelve running/stopping/paused
+    updateBotStatusUI(d.status || (d.running ? 'running' : 'paused'));
     if (d.last_cycle) {
       const el = document.getElementById('ctrl-last-cycle');
       if (el) el.textContent = 'Último ciclo: ' + new Date(d.last_cycle).toLocaleTimeString('es-ES');

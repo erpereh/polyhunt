@@ -18,7 +18,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 from core.db import get_db
 from core.paper_trader import get_dashboard_data
-from core.state import run_event
+from core.state import run_event, stop_requested
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,19 @@ def dashboard():
 @app.route("/api/status")
 def status():
     """Estado actual del bot (ciclos, última ejecución, etc.)."""
-    return jsonify(bot_status)
+    # Determinar estado real basado en los eventos
+    if run_event.is_set():
+        current_status = "running"
+    elif stop_requested.is_set():
+        current_status = "stopping"
+    else:
+        current_status = "paused"
+    
+    return jsonify({
+        **bot_status,
+        "status": current_status,
+        "running": run_event.is_set(),  # mantener para compatibilidad
+    })
 
 
 # ─── Control del bot ──────────────────────────────────────────────────────────
@@ -88,9 +100,10 @@ def bot_start():
 def bot_stop():
     """Pausa el bot. El ciclo en curso termina limpiamente; no se inicia el siguiente."""
     run_event.clear()
-    bot_status["running"] = False
-    logger.info("[API] Bot pausado desde el dashboard")
-    return jsonify({"ok": True, "status": "paused"})
+    stop_requested.set()
+    # No actualizar bot_status["running"] aquí — main.py lo hará cuando termine el ciclo
+    logger.info("[API] Stop solicitado desde el dashboard — esperando fin de ciclo")
+    return jsonify({"ok": True, "status": "stopping"})
 
 
 # ─── Reset y configuración ────────────────────────────────────────────────────
@@ -99,11 +112,14 @@ def bot_stop():
 def reset_db():
     """
     Borra TODOS los datos de Supabase y reinicia el balance.
-    Requiere que el bot esté PAUSADO — bloquea si está activo.
+    Requiere que el bot esté PAUSADO — bloquea si está activo o parándose.
     Body JSON opcional: {"balance": 10000}
     """
-    if bot_status.get("running", False):
-        return jsonify({"error": "El bot está activo. Pulsa STOP y espera a que termine el ciclo antes de resetear."}), 400
+    # Triple protección: no permitir reset si está corriendo O parándose
+    if run_event.is_set() or stop_requested.is_set():
+        return jsonify({
+            "error": "El bot está activo o parándose. Espera a que el estado sea PAUSADO antes de resetear."
+        }), 400
 
     data            = request.get_json(silent=True) or {}
     initial_balance = float(data.get("balance", 10000.0))
@@ -149,3 +165,17 @@ def get_logs():
         return jsonify({"lines": []})
     except Exception as e:
         return jsonify({"lines": [f"Error leyendo logs: {e}"]}), 500
+
+
+@app.route("/api/logs/clear", methods=["POST"])
+def clear_logs():
+    """Borra el contenido del archivo polyhunt.log."""
+    log_path = os.path.join(os.path.dirname(__file__), "polyhunt.log")
+    try:
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write("")
+        logger.info("[API] Logs borrados desde el dashboard")
+        return jsonify({"ok": True})
+    except Exception as e:
+        logger.error(f"[API] Error borrando logs: {e}")
+        return jsonify({"error": str(e)}), 500
