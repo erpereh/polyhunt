@@ -103,11 +103,13 @@ def bot_stop():
 def reset_db():
     """
     Borra TODOS los datos de Supabase y reinicia el balance.
-    Solo funciona si el bot está PAUSADO.
+    Fuerza el bot a PAUSADO antes de operar — nunca lo activa tras el reset.
     Body JSON opcional: {"balance": 10000}
     """
-    if bot_status.get("running", False):
-        return jsonify({"error": "El bot debe estar pausado antes de resetear"}), 400
+    # Forzar pausa ANTES de tocar la BD — evita escrituras concurrentes
+    _run_event.clear()
+    bot_status["running"] = False
+    logger.info("[Reset] Bot forzado a PAUSADO para reset de BD")
 
     data            = request.get_json(silent=True) or {}
     initial_balance = float(data.get("balance", 10000.0))
@@ -132,7 +134,7 @@ def reset_db():
             "total_pnl": 0.0,
         }).execute()
         logger.info(f"[Reset] BD reseteada — balance inicial ${initial_balance:,.2f}")
-        return jsonify({"ok": True, "balance": initial_balance})
+        return jsonify({"ok": True, "balance": initial_balance, "status": "paused"})
     except Exception as e:
         logger.error(f"[Reset] Error reseteando BD: {e}")
         return jsonify({"error": str(e)}), 500

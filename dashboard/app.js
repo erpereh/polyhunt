@@ -466,8 +466,11 @@ async function resetDB() {
     body: JSON.stringify({ balance: amount }),
   });
   const d = await r.json();
-  if (r.ok) { alert('BD reseteada correctamente.'); refresh(); }
-  else alert('Error: ' + (d.error || 'desconocido'));
+  if (r.ok) {
+    alert('BD reseteada correctamente.');
+    updateBotStatusUI(false);
+    refresh();
+  } else alert('Error: ' + (d.error || 'desconocido'));
 }
 
 
