@@ -138,34 +138,6 @@ def reset_db():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/config/balance", methods=["POST"])
-def config_balance():
-    """
-    Actualiza el capital inicial.
-    Solo funciona si la BD está vacía (sin trades ni posiciones).
-    Body JSON: {"amount": 5000}
-    """
-    data = request.get_json(silent=True) or {}
-    try:
-        amount = float(data.get("amount", 0))
-    except (TypeError, ValueError):
-        return jsonify({"error": "Valor inválido"}), 400
-
-    if not (100 <= amount <= 1_000_000):
-        return jsonify({"error": "El balance debe estar entre $100 y $1,000,000"}), 400
-
-    db = get_db()
-    has_trades    = bool(db.table("paper_trades").select("id").limit(1).execute().data)
-    has_positions = bool(db.table("positions").select("market_id").limit(1).execute().data)
-    if has_trades or has_positions:
-        return jsonify({
-            "error": "No puedes cambiar el capital con operaciones en curso. Resetea la BD primero."
-        }), 400
-
-    db.table("account").update({"balance": amount, "initial_balance": amount}).eq("id", 1).execute()
-    logger.info(f"[Config] Capital inicial actualizado a ${amount:,.2f}")
-    return jsonify({"ok": True, "balance": amount})
-
 
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 

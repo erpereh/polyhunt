@@ -143,8 +143,6 @@ function renderKPIs(data) {
     tradeCountEl.textContent = `${closedTrades.length} trades cerrados`;
   }
 
-  // Bloquear input de capital si hay cualquier trade o posición en la BD
-  updateCapitalUI(data.has_activity === true);
 }
 
 /* ─── Render Posiciones ─────────────────────────────────────────────────────── */
@@ -454,33 +452,24 @@ async function botStop() {
 }
 
 async function resetDB() {
-  const bal = parseFloat(document.getElementById('capital-input').value) || 10000;
-  if (!confirm(`¿Seguro? Esto borrará TODOS los datos.\nBalance inicial: $${bal.toLocaleString()}`)) return;
+  const raw = prompt("¿Con cuánto capital quieres empezar?\n\nMínimo: $100", "10000");
+  if (raw === null) return;
+  const amount = parseFloat(raw);
+  if (!amount || amount < 100) {
+    alert("Valor inválido. Mínimo $100.");
+    return;
+  }
+  if (!confirm(`¿Seguro? Esto borrará TODOS los datos.\nCapital inicial: $${amount.toLocaleString()}`)) return;
   const r = await fetch('/api/reset', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ balance: bal }),
+    body: JSON.stringify({ balance: amount }),
   });
   const d = await r.json();
   if (r.ok) { alert('BD reseteada correctamente.'); refresh(); }
   else alert('Error: ' + (d.error || 'desconocido'));
 }
 
-async function applyCapital() {
-  const val = parseFloat(document.getElementById('capital-input').value);
-  if (!val || val < 100 || val > 1_000_000) {
-    alert('El capital debe estar entre $100 y $1,000,000');
-    return;
-  }
-  const r = await fetch('/api/config/balance', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ amount: val }),
-  });
-  const d = await r.json();
-  if (r.ok) { alert(`Capital actualizado: $${val.toLocaleString()}`); refresh(); }
-  else alert('Error: ' + (d.error || 'desconocido'));
-}
 
 function updateBotStatusUI(isRunning) {
   const badge    = document.getElementById('ctrl-status-badge');
@@ -497,15 +486,6 @@ function updateBotStatusUI(isRunning) {
   if (btnReset) btnReset.style.display = isRunning ? 'none' : '';
 }
 
-function updateCapitalUI(hasTrades) {
-  const input  = document.getElementById('capital-input');
-  const lock   = document.getElementById('capital-lock');
-  const btnCap = document.getElementById('btn-capital');
-  if (!input) return;
-  input.disabled  = hasTrades;
-  if (btnCap) btnCap.disabled = hasTrades;
-  if (lock)   lock.className  = 'capital-lock' + (hasTrades ? '' : ' hidden');
-}
 
 function toggleConsole() {
   const body   = document.getElementById('console-body');

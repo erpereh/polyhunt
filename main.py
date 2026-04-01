@@ -69,7 +69,7 @@ logger = logging.getLogger(__name__)
 
 CYCLE_SECONDS        = 15 * 60   # 15 minutos entre ciclos
 TRADE_SIZE_USD       = 500.0      # tamaño base de cada posición en USD
-FLASK_PORT           = 5000
+FLASK_PORT           = int(os.environ.get("PORT", 5000))
 FLASK_HOST           = "0.0.0.0"
 MARKETS_PER_CYCLE    = 50         # máximo de mercados a analizar por ciclo
 PRICE_SKIP_LOW       = 0.02       # skip si precio YES < 2% (casi resuelto NO)

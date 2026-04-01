@@ -689,62 +689,6 @@ a { text-decoration: none; cursor: pointer; }
   background: rgba(251, 191, 36, 0.08);
   border-color: rgba(251, 191, 36, 0.25);
 }
-.ctrl-btn.apply {
-  color: var(--green);
-  background: var(--green-dim);
-  border-color: var(--green-border);
-}
-
-.ctrl-label {
-  font-size: 11px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.capital-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.capital-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-#capital-input {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  width: 110px;
-  outline: none;
-  transition: border-color 0.2s, background 0.2s;
-  -moz-appearance: textfield;
-}
-#capital-input::-webkit-outer-spin-button,
-#capital-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-#capital-input:not(:disabled) {
-  border-color: var(--green-border);
-  background: var(--green-dim);
-}
-#capital-input:disabled {
-  color: var(--text-secondary);
-  cursor: not-allowed;
-}
-
-.capital-lock {
-  position: absolute;
-  right: 8px;
-  font-size: 11px;
-  pointer-events: none;
-}
-.capital-lock.hidden { display: none; }
-
 .ctrl-last-cycle {
   font-family: var(--font-mono);
   font-size: 11px;
