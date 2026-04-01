@@ -36,10 +36,9 @@ PACIFIC_TZ = ZoneInfo("America/Los_Angeles")
 COOLDOWN_MINUTES = 30
 
 # Cache en memoria de las keys agrupadas por servicio
-# Estructura: { "cerebras": [key_dict, ...], "gemini": [...], "groq": [...] }
+# Estructura: { "cerebras": [key_dict, ...], "groq": [...] }
 _keys_cache: dict[str, list[dict]] = {
     "cerebras": [],
-    "gemini": [],
     "groq": [],
 }
 
@@ -82,16 +81,16 @@ def load_keys() -> dict[str, int]:
     Carga todas las keys habilitadas desde Supabase a memoria.
     
     Returns:
-        dict con conteo por servicio: {"cerebras": 2, "gemini": 3, "groq": 1}
+        dict con conteo por servicio: {"cerebras": 2, "groq": 1}
     """
     global _keys_cache
     db = get_db()
-    counts = {"cerebras": 0, "gemini": 0, "groq": 0}
+    counts = {"cerebras": 0, "groq": 0}
     
     try:
         result = db.table("api_keys").select("*").eq("is_enabled", True).execute()
         
-        new_cache = {"cerebras": [], "gemini": [], "groq": []}
+        new_cache = {"cerebras": [], "groq": []}
         
         for row in result.data or []:
             service = row.get("service")

@@ -95,7 +95,7 @@
               <span class="card-title">Posiciones Abiertas</span>
               <span class="card-count" id="overview-pos-count">0</span>
             </div>
-            <div class="card-body" id="overview-positions-body">
+            <div class="card-body card-body-scroll" id="overview-positions-body">
               <div class="empty-state">
                 <div class="empty-state-icon">◎</div>
                 <div class="empty-state-title">Sin posiciones abiertas</div>
@@ -110,7 +110,7 @@
               <span class="card-title">Últimas Noticias</span>
               <span class="card-count" id="overview-news-count">0</span>
             </div>
-            <div class="card-body" id="overview-news-body">
+            <div class="card-body card-body-scroll" id="overview-news-body">
               <div class="empty-state">
                 <div class="empty-state-icon">◌</div>
                 <div class="empty-state-title">Sin noticias aún</div>
@@ -145,7 +145,7 @@
             <span class="card-title">Trades Activos</span>
             <span class="card-count" id="positions-count">0</span>
           </div>
-          <div class="card-body" id="positions-body">
+          <div class="card-body card-body-scroll" id="positions-body">
             <div class="empty-state">
               <div class="empty-state-icon">◎</div>
               <div class="empty-state-title">Sin posiciones abiertas</div>
@@ -165,7 +165,7 @@
             <span class="card-title">Todos los Trades</span>
             <span class="card-count" id="trades-count">0</span>
           </div>
-          <div class="card-body" id="trades-body">
+          <div class="card-body card-body-scroll" id="trades-body">
             <div class="empty-state">
               <div class="empty-state-icon">⟳</div>
               <div class="empty-state-title">Sin trades registrados</div>
@@ -185,7 +185,7 @@
             <span class="card-title">Escáner Polymarket</span>
             <span class="card-count" id="markets-count">0</span>
           </div>
-          <div class="card-body" id="markets-body">
+          <div class="card-body card-body-scroll" id="markets-body">
             <div class="empty-state">
               <div class="empty-state-icon">◫</div>
               <div class="empty-state-title">Sin mercados escaneados</div>
@@ -205,7 +205,7 @@
             <span class="card-title">Predicciones IA</span>
             <span class="card-count" id="analyses-count">0</span>
           </div>
-          <div class="card-body" id="analyses-body">
+          <div class="card-body card-body-scroll" id="analyses-body">
             <div class="empty-state">
               <div class="empty-state-icon">◉</div>
               <div class="empty-state-title">Sin análisis registrados</div>
@@ -225,7 +225,7 @@
             <span class="card-title">Artículos Procesados</span>
             <span class="card-count" id="news-count">0</span>
           </div>
-          <div class="card-body" id="news-body">
+          <div class="card-body card-body-scroll" id="news-body">
             <div class="empty-state">
               <div class="empty-state-icon">◌</div>
               <div class="empty-state-title">Sin noticias procesadas</div>
@@ -253,17 +253,6 @@
             </div>
           </div>
 
-          <div class="glass-card settings-card" id="settings-gemini">
-            <div class="card-header">
-              <span class="card-title">Gemini</span>
-              <button class="ctrl-btn-sm" onclick="openAddKey('gemini')">Añadir key</button>
-            </div>
-            <div class="card-body">
-              <p class="settings-note">Cada key debe venir de un proyecto de Google Cloud distinto. Keys del mismo proyecto comparten quota.</p>
-              <div id="keys-gemini" class="keys-list"></div>
-            </div>
-          </div>
-
           <div class="glass-card settings-card" id="settings-groq">
             <div class="card-header">
               <span class="card-title">Groq</span>
@@ -278,6 +267,22 @@
       </section>
 
     </main>
+  </div>
+
+  <div id="app-modal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+    <div class="app-modal-overlay" data-close="overlay"></div>
+    <div class="app-modal-card glass-card" role="document">
+      <div class="app-modal-header">
+        <h3 id="app-modal-title" class="app-modal-title">Confirmar acción</h3>
+        <button id="app-modal-close" class="app-modal-close" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="app-modal-body" class="app-modal-body"></div>
+      <div id="app-modal-error" class="app-modal-error hidden"></div>
+      <div class="app-modal-actions">
+        <button id="app-modal-cancel" class="ctrl-btn-sm">Cancelar</button>
+        <button id="app-modal-confirm" class="ctrl-btn-sm modal-confirm">Aceptar</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

@@ -16,7 +16,6 @@ import os
 
 from flask import Flask, jsonify, request, send_from_directory
 from openai import OpenAI
-import google.generativeai as genai
 from groq import Groq
 
 from core.db import get_db
@@ -205,20 +204,11 @@ def _validate_key(service: str, key_value: str) -> tuple[bool, str]:
         if service == "cerebras":
             client = OpenAI(base_url="https://api.cerebras.ai/v1", api_key=key_value)
             client.chat.completions.create(
-                model="qwen-3-235b",
+                model="qwen-3-235b-a22b-instruct-2507",
                 messages=[{"role": "user", "content": "Responde ok"}],
                 max_tokens=5,
                 temperature=0,
                 timeout=15,
-            )
-            return True, "ok"
-        if service == "gemini":
-            genai.configure(api_key=key_value)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            model.generate_content(
-                "Responde ok",
-                generation_config=genai.GenerationConfig(max_output_tokens=5, temperature=0),
-                request_options={"timeout": 15},
             )
             return True, "ok"
         if service == "groq":
@@ -250,9 +240,12 @@ def get_settings_keys():
         )
         safe = []
         for r in rows:
+            service = r.get("service")
+            if service not in ("cerebras", "groq"):
+                continue
             safe.append({
                 "id": r.get("id"),
-                "service": r.get("service"),
+                "service": service,
                 "label": r.get("label"),
                 "is_enabled": r.get("is_enabled", True),
                 "in_cooldown": r.get("in_cooldown", False),
@@ -275,7 +268,7 @@ def create_settings_key():
     key_value = (data.get("key_value") or "").strip()
     label = (data.get("label") or "").strip()
 
-    if service not in ("cerebras", "gemini", "groq"):
+    if service not in ("cerebras", "groq"):
         return jsonify({"ok": False, "error": "service inválido"}), 400
     if not key_value:
         return jsonify({"ok": False, "error": "key_value es obligatorio"}), 400

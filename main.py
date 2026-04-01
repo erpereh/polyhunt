@@ -281,9 +281,8 @@ def _scan_loop() -> None:
                 f"[Scan #{scan_num}] {elapsed:.1f}s | Mercados={scanned} · CambioPrecio={price_changed} · "
                 f"NoticiasNuevas={new_news_count} · ColaLLM={_llm_queue.qsize()} · QuantSkip={skipped_quant} · "
                 f"CerebrasOK/Err={model_stats['cerebras_ok']}/{model_stats['cerebras_err']} · "
-                f"GeminiOK/Err={model_stats['gemini_ok']}/{model_stats['gemini_err']} · "
                 f"GroqOK/Err={model_stats['groq_ok']}/{model_stats['groq_err']} · "
-                f"Cooldowns=cerebras:{cd.get('cerebras',0)} gemini:{cd.get('gemini',0)} groq:{cd.get('groq',0)} · Trades={trades_closed}"
+                f"Cooldowns=cerebras:{cd.get('cerebras',0)} groq:{cd.get('groq',0)} · Trades={trades_closed}"
             )
 
             set_bot_status(
@@ -342,7 +341,7 @@ def _llm_loop() -> None:
                 .data or []
             )
 
-            cerebras_result, gemini_result, groq_result, gap, should_trade = full_analysis(
+            cerebras_result, groq_result, gap, should_trade = full_analysis(
                 market=market,
                 market_price=market_price,
                 news_articles=news,
@@ -356,14 +355,14 @@ def _llm_loop() -> None:
 
             if should_trade:
                 probs = []
-                for res in (cerebras_result, gemini_result, groq_result):
+                for res in (cerebras_result, groq_result):
                     if res and res.get("probability_yes") is not None:
                         probs.append(float(res["probability_yes"]))
                 if probs:
                     prob_yes = sum(probs) / len(probs)
                     direction = "YES" if prob_yes > market_price else "NO"
-                    groq_reasoning = (groq_result or {}).get("reasoning", "") or (gemini_result or {}).get("reasoning", "") or (cerebras_result or {}).get("reasoning", "")
-                    gemini_reasoning = (gemini_result or {}).get("reasoning", "")
+                    groq_reasoning = (groq_result or {}).get("reasoning", "") or (cerebras_result or {}).get("reasoning", "")
+                    gemini_reasoning = ""
                     trade_id, _ = open_paper_trade(
                         market_id=market_id,
                         direction=direction,

@@ -669,6 +669,16 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
   padding: 0;
 }
 
+.card-body-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.card-body-scroll .data-table {
+  width: 100%;
+}
+
 /* ─── Bento Grid Layout ─────────────────────────────────────────────────────── */
 .bento-grid {
   display: grid;
@@ -1221,6 +1231,169 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
   border-color: var(--accent-border);
 }
 
+/* ─── App Modal ────────────────────────────────────────────────────────────── */
+.app-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+}
+
+.app-modal.hidden {
+  display: none !important;
+}
+
+.app-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="light"] .app-modal-overlay {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+.app-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-hover);
+  background: linear-gradient(155deg, var(--glass-bg-hover) 0%, var(--glass-bg) 100%);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  box-shadow: 0 28px 70px rgba(5, 8, 15, 0.45);
+  overflow: hidden;
+}
+
+.app-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.app-modal-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.app-modal-close {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.app-modal-close:hover {
+  border-color: var(--glass-border-hover);
+  color: var(--text-primary);
+  background: var(--glass-bg-hover);
+}
+
+.app-modal-body {
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.app-modal-error {
+  margin: 0 var(--space-lg);
+  margin-top: calc(var(--space-sm) * -1);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: var(--loss-dim);
+  color: var(--loss);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.app-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--glass-border);
+}
+
+.app-modal .ctrl-btn-sm {
+  min-width: 92px;
+  padding: 6px 12px;
+  font-size: 11px;
+}
+
+.modal-confirm {
+  border-color: var(--accent-border);
+  background: var(--accent-dim);
+  color: var(--accent-light);
+}
+
+.modal-confirm:hover {
+  background: color-mix(in srgb, var(--accent-dim) 80%, transparent);
+}
+
+.modal-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-form-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.modal-input {
+  width: 100%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.modal-input::-webkit-outer-spin-button,
+.modal-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.modal-input:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-dim) 60%, transparent);
+}
+
+.modal-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.modal-emphasis {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 /* ─── Responsive ────────────────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .kpi-grid {
@@ -1297,6 +1470,22 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
 
   .market-question {
     max-width: 180px;
+  }
+
+  .card-body-scroll {
+    max-height: 320px;
+  }
+
+  .app-modal {
+    padding: var(--space-md);
+  }
+
+  .app-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .app-modal .ctrl-btn-sm {
+    width: 100%;
   }
 }
 

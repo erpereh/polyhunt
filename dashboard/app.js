@@ -7,6 +7,128 @@
 let lastData = null;
 let currentSection = 'overview';
 let settingsKeys = [];
+let modalState = null;
+let modalTriggerEl = null;
+
+function getModalEls() {
+  return {
+    root: document.getElementById('app-modal'),
+    title: document.getElementById('app-modal-title'),
+    body: document.getElementById('app-modal-body'),
+    error: document.getElementById('app-modal-error'),
+    confirm: document.getElementById('app-modal-confirm'),
+    cancel: document.getElementById('app-modal-cancel'),
+    close: document.getElementById('app-modal-close'),
+  };
+}
+
+function setModalError(message = '') {
+  const { error } = getModalEls();
+  if (!error) return;
+  if (!message) {
+    error.textContent = '';
+    error.classList.add('hidden');
+    return;
+  }
+  error.textContent = message;
+  error.classList.remove('hidden');
+}
+
+function setModalBusy(isBusy) {
+  const { confirm, cancel, close } = getModalEls();
+  if (!confirm || !cancel || !close) return;
+  confirm.disabled = isBusy;
+  cancel.disabled = isBusy;
+  close.disabled = isBusy;
+}
+
+function closeModal() {
+  const { root, body } = getModalEls();
+  if (!root || !body) return;
+  if (modalState && modalState.busy) return;
+  root.classList.add('hidden');
+  body.innerHTML = '';
+  setModalError('');
+  modalState = null;
+  if (modalTriggerEl && typeof modalTriggerEl.focus === 'function') {
+    modalTriggerEl.focus();
+  }
+}
+
+async function confirmModalAction() {
+  if (!modalState || modalState.busy) return;
+  const { onConfirm, collectData } = modalState;
+  if (!onConfirm) {
+    closeModal();
+    return;
+  }
+  try {
+    modalState.busy = true;
+    setModalBusy(true);
+    setModalError('');
+    const payload = collectData ? collectData() : undefined;
+    await onConfirm(payload);
+    closeModal();
+  } catch (e) {
+    setModalError(e?.message || 'Ha ocurrido un error.');
+  } finally {
+    if (modalState) {
+      modalState.busy = false;
+      setModalBusy(false);
+    }
+  }
+}
+
+function openModal({ title, bodyHTML, confirmText = 'Aceptar', cancelText = 'Cancelar', onConfirm, collectData, wide = false }) {
+  const { root, title: titleEl, body, confirm, cancel, close } = getModalEls();
+  if (!root || !titleEl || !body || !confirm || !cancel || !close) return;
+
+  modalTriggerEl = document.activeElement;
+  modalState = { onConfirm, collectData, busy: false };
+  titleEl.textContent = title || 'Confirmar acción';
+  body.innerHTML = bodyHTML || '';
+  confirm.textContent = confirmText;
+  cancel.textContent = cancelText;
+  setModalError('');
+  setModalBusy(false);
+  root.classList.remove('hidden');
+
+  const firstInput = body.querySelector('input, textarea, select, button');
+  if (firstInput && typeof firstInput.focus === 'function') {
+    firstInput.focus();
+  } else {
+    confirm.focus();
+  }
+}
+
+function initModal() {
+  const { root, confirm, cancel, close } = getModalEls();
+  if (!root || !confirm || !cancel || !close) return;
+
+  confirm.addEventListener('click', confirmModalAction);
+  cancel.addEventListener('click', closeModal);
+  close.addEventListener('click', closeModal);
+
+  root.addEventListener('click', (e) => {
+    const target = e.target;
+    if (target && target.getAttribute && target.getAttribute('data-close') === 'overlay') {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalState) {
+      closeModal();
+    }
+    if (e.key === 'Enter' && modalState) {
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (tag !== 'textarea') {
+        e.preventDefault();
+        confirmModalAction();
+      }
+    }
+  });
+}
 
 /* ─── Format Helpers ────────────────────────────────────────────────────────── */
 const fmt = {
@@ -321,7 +443,7 @@ function renderAnalyses(analyses) {
     body.innerHTML = `<div class="empty-state">
       <div class="empty-state-icon">◉</div>
       <div class="empty-state-title">Sin análisis registrados</div>
-      <div class="empty-state-desc">Los análisis de Groq y Gemini se almacenan aquí para calibración futura.</div>
+      <div class="empty-state-desc">Los análisis de Cerebras y Groq se almacenan aquí para calibración futura.</div>
     </div>`;
     return;
   }
@@ -443,7 +565,6 @@ async function refreshKeys() {
     const d = await r.json();
     settingsKeys = d.keys || [];
     renderKeysByService('cerebras');
-    renderKeysByService('gemini');
     renderKeysByService('groq');
   } catch (e) {
     console.error('[PolyHunt] Error cargando keys:', e);
@@ -496,41 +617,53 @@ function cooldownMinutes(cooldownUntil) {
 }
 
 async function openAddKey(service) {
-  const label = prompt(`Label para key de ${service}:`, `${service}-key`);
-  if (label === null) return;
-  const keyValue = prompt(`Pega la API key completa de ${service}:`);
-  if (!keyValue) return;
-
-  try {
-    const r = await fetch('/api/settings/keys', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ service, label, key_value: keyValue })
-    });
-    const d = await r.json();
-    if (!r.ok || !d.ok) {
-      alert(d.error || 'No se pudo añadir la key');
-      return;
+  openModal({
+    title: `Añadir API key (${service})`,
+    confirmText: 'Guardar key',
+    cancelText: 'Cancelar',
+    bodyHTML: `
+      <div class="modal-form-group">
+        <label class="modal-form-label" for="modal-key-label">Label</label>
+        <input id="modal-key-label" class="modal-input" type="text" maxlength="120" value="${service}-key" />
+      </div>
+      <div class="modal-form-group">
+        <label class="modal-form-label" for="modal-key-value">API Key</label>
+        <input id="modal-key-value" class="modal-input" type="password" autocomplete="off" />
+        <div class="modal-hint">Se almacenará de forma segura y en la interfaz solo se muestra el final (****1234).</div>
+      </div>
+    `,
+    collectData: () => {
+      const label = (document.getElementById('modal-key-label')?.value || '').trim();
+      const keyValue = (document.getElementById('modal-key-value')?.value || '').trim();
+      if (!keyValue) throw new Error('La API key es obligatoria.');
+      return { label, keyValue };
+    },
+    onConfirm: async ({ label, keyValue }) => {
+      const r = await fetch('/api/settings/keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service, label, key_value: keyValue })
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || 'No se pudo añadir la key.');
+      await refreshKeys();
     }
-    await refreshKeys();
-  } catch (e) {
-    alert('Error de conexión al añadir key');
-  }
+  });
 }
 
 async function deleteKey(id) {
-  if (!confirm('¿Eliminar esta key?')) return;
-  try {
-    const r = await fetch(`/api/settings/keys/${id}`, { method: 'DELETE' });
-    const d = await r.json();
-    if (!r.ok || !d.ok) {
-      alert(d.error || 'No se pudo eliminar');
-      return;
+  openModal({
+    title: 'Eliminar key',
+    confirmText: 'Eliminar',
+    cancelText: 'Cancelar',
+    bodyHTML: `<div>Esta acción quitará la key del proveedor y no se podrá deshacer.</div>`,
+    onConfirm: async () => {
+      const r = await fetch(`/api/settings/keys/${id}`, { method: 'DELETE' });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || 'No se pudo eliminar.');
+      await refreshKeys();
     }
-    await refreshKeys();
-  } catch (e) {
-    alert('Error de conexión al eliminar key');
-  }
+  });
 }
 
 async function toggleKey(id, isEnabled) {
@@ -542,12 +675,24 @@ async function toggleKey(id, isEnabled) {
     });
     const d = await r.json();
     if (!r.ok || !d.ok) {
-      alert(d.error || 'No se pudo actualizar');
+      openModal({
+        title: 'No se pudo actualizar',
+        confirmText: 'Entendido',
+        cancelText: 'Cerrar',
+        bodyHTML: `<div>${d.error || 'No se pudo actualizar el estado de la key.'}</div>`,
+        onConfirm: async () => {}
+      });
       return;
     }
     await refreshKeys();
   } catch (e) {
-    alert('Error de conexión al actualizar key');
+    openModal({
+      title: 'Error de conexión',
+      confirmText: 'Entendido',
+      cancelText: 'Cerrar',
+      bodyHTML: '<div>Error de conexión al actualizar key.</div>',
+      onConfirm: async () => {}
+    });
   }
 }
 
@@ -567,44 +712,62 @@ async function resetDB() {
   try {
     status = await fetch('/api/status').then(r => r.json());
   } catch (e) {
-    alert('Error al verificar estado del bot.');
+    openModal({
+      title: 'Error de conexión',
+      confirmText: 'Entendido',
+      cancelText: 'Cerrar',
+      bodyHTML: '<div>No se pudo verificar el estado del bot.</div>',
+      onConfirm: async () => {}
+    });
     return;
   }
 
   if (status.status !== 'paused') {
-    alert('El bot debe estar completamente pausado antes de reiniciar.\nEspera a que el estado muestre PAUSADO.');
-    return;
-  }
-
-  const raw = prompt('Introduce el capital inicial:\n\nMínimo: $100', '10000');
-  if (raw === null) return;
-
-  const amount = parseFloat(raw);
-  if (isNaN(amount) || amount < 100) {
-    alert('Cantidad inválida. Mínimo $100.');
-    return;
-  }
-
-  if (!confirm(`¿Reiniciar TODOS los datos?\nCapital inicial: $${amount.toLocaleString('es-ES')}`)) return;
-
-  try {
-    const res = await fetch('/api/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ balance: amount })
+    openModal({
+      title: 'Bot en ejecución',
+      confirmText: 'Entendido',
+      cancelText: 'Cerrar',
+      bodyHTML: '<div>El bot debe estar completamente <span class="modal-emphasis">PAUSADO</span> antes de reiniciar la base de datos.</div>',
+      onConfirm: async () => {}
     });
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert('Error: ' + (data.error || 'Reinicio fallido.'));
-      return;
-    }
-
-    updateBotStatusUI('paused');
-    await refresh();
-  } catch (e) {
-    alert('Error de conexión durante el reinicio.');
+    return;
   }
+
+  openModal({
+    title: 'Reiniciar base de datos',
+    confirmText: 'Reiniciar BD',
+    cancelText: 'Cancelar',
+    bodyHTML: `
+      <div>Se borrarán <span class="modal-emphasis">todos los datos</span> de paper trading (trades, posiciones, análisis, noticias y snapshots).</div>
+      <div class="modal-form-group">
+        <label class="modal-form-label" for="modal-reset-balance">Capital inicial (USD)</label>
+        <input id="modal-reset-balance" class="modal-input" type="text" inputmode="decimal" autocomplete="off" value="10000" />
+        <div class="modal-hint">Mínimo permitido: $100</div>
+      </div>
+    `,
+    collectData: () => {
+      const raw = document.getElementById('modal-reset-balance')?.value;
+      const amount = parseFloat(raw);
+      if (isNaN(amount) || amount < 100) {
+        throw new Error('Cantidad inválida. El mínimo es $100.');
+      }
+      if (!isFinite(amount)) {
+        throw new Error('Cantidad inválida.');
+      }
+      return { amount };
+    },
+    onConfirm: async ({ amount }) => {
+      const res = await fetch('/api/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: amount })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Reinicio fallido.');
+      updateBotStatusUI('paused');
+      await refresh();
+    }
+  });
 }
 
 function updateBotStatusUI(status) {
@@ -721,6 +884,7 @@ function initTheme() {
 /* ─── Initialize ────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
+  initModal();
   refresh();
   refreshStatus();
   refreshLogs();
