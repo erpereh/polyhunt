@@ -13,19 +13,9 @@ from typing import Optional
 import feedparser
 from groq import Groq
 
-from config import GROQ_API_KEY
+from core import key_manager
 
 logger = logging.getLogger(__name__)
-
-_groq_client: Optional[Groq] = None
-
-
-def _get_groq() -> Groq:
-    global _groq_client
-    if _groq_client is None:
-        _groq_client = Groq(api_key=GROQ_API_KEY)
-    return _groq_client
-
 
 # Feeds RSS ordenados por relevancia para mercados políticos globales de Polymarket
 NEWS_FEEDS = [
@@ -127,20 +117,32 @@ def score_relevance(article: dict, market_question: str) -> float:
         f"Donde relevance_score está entre 0.0 (nada relevante) y 1.0 (directamente relevante)."
     )
 
+    key_data = None
     try:
-        client   = _get_groq()
+        key_data = key_manager.get_next_key("groq")
+        if not key_data:
+            return 0.0
+
+        client   = Groq(api_key=key_data["key_value"])
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,
             max_tokens=120,
         )
+        tokens_used = response.usage.total_tokens if response.usage else 0
+        key_manager.mark_success(key_data["id"], tokens_used)
         content = response.choices[0].message.content
         match   = re.search(r'\{[^{}]*\}', content, re.DOTALL)
         if match:
             data = json.loads(match.group())
             return float(data.get("relevance_score", 0.0))
     except Exception as e:
+        if key_data and "429" in str(e):
+            try:
+                key_manager.mark_cooldown(key_data["id"], str(e)[:200])
+            except Exception:
+                pass
         logger.debug(f"[{datetime.now()}] Error scoring artículo: {e}")
 
     return 0.0

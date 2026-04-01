@@ -1,24 +1,8 @@
 """
-PolyHunt — Bot principal de paper trading en Polymarket.
+PolyHunt — bot principal con arquitectura event-driven.
 
-PAPER TRADING ONLY — nunca conecta a wallets reales ni ejecuta órdenes reales.
-Toda la operativa es simulada en Supabase.
-
-Ciclo principal (cada 15 minutos):
-  1. Escanear mercados políticos de Polymarket
-  2. Guardar mercados y snapshots en Supabase
-  3. Procesar feeds RSS → guardar noticias relevantes
-  4. Analizar cada mercado con LLM dual (Groq + Gemini)
-  5. Abrir posición si should_trade=True
-  6. Actualizar P&L no realizado de posiciones abiertas
-  7. Revisar stop losses (cerrar si pérdida > 30%)
-
-Arranque:
-  - Valida configuración (config.py hace sys.exit si falta alguna variable)
-  - Inicia Flask en hilo daemon (puerto 5000)
-  - Muestra URL del dashboard
-  - Inicia loop principal
-  - Ctrl+C para parada limpia
+Loop 1 (cada 5 min): escaneo de precios, noticias, P&L, reglas de salida.
+Loop 2 (continuo): consume cola LLM y ejecuta análisis en cascada.
 """
 import logging
 import os
@@ -26,349 +10,394 @@ import signal
 import sys
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from queue import PriorityQueue, Empty
 
-# Forzar UTF-8 en consola Windows para caracteres especiales
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-# Validar variables de entorno antes de nada
-__import__("config")  # valida variables de entorno al arrancar (sys.exit si falta alguna)
+__import__("config")
 
-from core.market_scanner import get_political_markets, save_markets_to_db, get_market_price
-from core.llm_analyzer   import full_analysis
-from core.news_monitor   import fetch_news, save_articles_to_db
-from core.paper_trader   import (
+from core.market_scanner import get_political_markets, get_market_price
+from core.news_monitor import fetch_news, save_articles_to_db
+from core.llm_analyzer import full_analysis, pop_model_stats
+from core.paper_trader import (
     open_paper_trade,
     update_unrealized_pnl,
-    check_stop_losses,
+    check_exit_rules,
+    upsert_market,
+    save_price_snapshot,
 )
+from core.db import get_db
 from core.state import run_event, stop_requested
+from core import key_manager
 from server import app, set_bot_status
-
-# ─── Logging ──────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-
-# Silenciar loggers ruidosos que generan spam de requests HTTP
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
-logging.getLogger("hpack").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
-# FileHandler: escribe en polyhunt.log para que /api/logs pueda leerlo
 _log_file = os.path.join(os.path.dirname(__file__), "polyhunt.log")
 _fh = logging.FileHandler(_log_file, encoding="utf-8")
-_fh.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-))
+_fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s — %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
 logging.getLogger().addHandler(_fh)
 
 logger = logging.getLogger(__name__)
 
-# ─── Configuración ────────────────────────────────────────────────────────────
-
-CYCLE_SECONDS        = 15 * 60   # 15 minutos entre ciclos
-TRADE_SIZE_USD       = 500.0      # tamaño base de cada posición en USD
-FLASK_PORT           = int(os.environ.get("PORT", 5000))
-FLASK_HOST           = "0.0.0.0"
-MARKETS_PER_CYCLE    = 50         # máximo de mercados a analizar por ciclo
-PRICE_SKIP_LOW       = 0.02       # skip si precio YES < 2% (casi resuelto NO)
-PRICE_SKIP_HIGH      = 0.98       # skip si precio YES > 98% (casi resuelto YES)
-
-# Palabras clave que identifican mercados especulativos sin datos objetivos.
-# Conteos de redes sociales, métricas de engagement, etc.
-SPECULATION_KEYWORDS = frozenset([
-    "tweet", "tweets", "post", "posts", "retweet", "retweets",
-    "follower", "followers", "view", "views", "like", "likes",
-])
-
-# ─── Control de parada ────────────────────────────────────────────────────────
+SCAN_SECONDS = 5 * 60
+TRADE_SIZE_USD = 500.0
+FLASK_PORT = int(os.environ.get("PORT", 5000))
+FLASK_HOST = "0.0.0.0"
+MARKETS_PER_SCAN = 150
 
 _stop_event = threading.Event()
+_llm_queue: PriorityQueue = PriorityQueue()
+_queued_market_ids: set[str] = set()
+_queue_lock = threading.Lock()
+_queue_counter = 0
 
 
 def _handle_sigint(_sig, _frame):
-    """Maneja Ctrl+C para parada limpia."""
-    print("\n[PolyHunt] Señal de parada recibida — cerrando…")
+    print("\n[PolyHunt] Señal de parada recibida — cerrando...")
     _stop_event.set()
+    run_event.clear()
 
-
-# ─── Flask en hilo daemon ─────────────────────────────────────────────────────
 
 def _start_flask() -> None:
-    """Inicia el servidor Flask en un hilo daemon (no bloquea el loop principal)."""
-    import os
-    # Desactivar log de werkzeug en producción para no ensuciar la terminal
-    log = logging.getLogger("werkzeug")
-    log.setLevel(logging.ERROR)
-    os.environ.setdefault("FLASK_ENV", "production")
-
     try:
         app.run(host=FLASK_HOST, port=FLASK_PORT, debug=False, use_reloader=False)
     except Exception as e:
         logger.error(f"Error arrancando Flask: {e}")
 
 
-# ─── Ciclo principal ──────────────────────────────────────────────────────────
+def _score_market(market: dict, price: float, has_recent_news: bool) -> tuple[int, list[str]]:
+    score = 0
+    reasons = []
 
-def run_cycle(cycle_num: int) -> None:
-    """
-    Ejecuta un ciclo completo de trading:
-      1. Escanear mercados
-      2. Procesar noticias
-      3. Analizar con LLM y abrir trades
-      4. Actualizar P&L no realizado
-      5. Revisar stop losses
-    """
-    cycle_start = datetime.now(timezone.utc)
-    logger.info(f"{'─'*60}")
-    logger.info(f"[Ciclo #{cycle_num}] Iniciando — {cycle_start.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    if 0.02 <= price <= 0.98:
+        score += 30
+    else:
+        reasons.append("precio fuera 2%-98%")
 
-    # ── 1. Escanear mercados ───────────────────────────────────────────────────
-    logger.info("[Ciclo] Paso 1/5 — Escaneando mercados políticos…")
-    try:
-        markets = get_political_markets(
-            min_volume=50_000,
-            max_volume=250_000,
-            min_days_remaining=7,
-        )
-        saved_count = save_markets_to_db(markets) if markets else 0
-        logger.info(f"[Ciclo] {len(markets)} mercados encontrados, {saved_count} guardados")
-    except Exception as e:
-        logger.error(f"[Ciclo] Error escaneando mercados: {e}")
-        markets = []
+    volume = float(market.get("volume") or 0)
+    if 50_000 <= volume <= 250_000:
+        score += 25
+    else:
+        reasons.append("volumen fuera 50K-250K")
 
-    set_bot_status(markets_scanned=len(markets))
-
-    # ── 2. Procesar noticias ──────────────────────────────────────────────────
-    logger.info("[Ciclo] Paso 2/5 — Procesando noticias RSS…")
-    try:
-        articles = fetch_news(max_age_hours=6)
-        news_saved = save_articles_to_db(articles, active_markets=markets)
-        logger.info(f"[Ciclo] {len(articles)} artículos obtenidos, {news_saved} guardados")
-    except Exception as e:
-        logger.error(f"[Ciclo] Error procesando noticias: {e}")
-
-    # ── 3. Seleccionar top-50 por volumen con rotación entre ciclos ──────────────
-    # Ordenar por volumen desc y tomar los primeros MARKETS_PER_CYCLE,
-    # rotando el punto de inicio para cubrir todos los mercados gradualmente.
-    markets_sorted = sorted(markets, key=lambda m: m.get("volume", 0), reverse=True)
-    total_markets  = len(markets_sorted)
-    rotation_start = ((cycle_num - 1) * MARKETS_PER_CYCLE) % max(total_markets, 1)
-    # Construir ventana rotativa circular
-    indices = [(rotation_start + i) % total_markets for i in range(min(MARKETS_PER_CYCLE, total_markets))]
-    batch   = [markets_sorted[i] for i in indices]
-
-    logger.info(
-        f"[Ciclo] Paso 3/5 — Analizando {len(batch)}/{total_markets} mercados "
-        f"(rot={rotation_start}, ciclo={cycle_num})…"
-    )
-    trades_opened = 0
-
-    try:
-        from core.news_monitor import get_relevant_news
-        news_cache = get_relevant_news(limit=5)
-    except Exception:
-        news_cache = []
-
-    # Cargar set de market_ids con noticias relacionadas en los últimos 7 días.
-    # Si related_news_count = 0 para un mercado → skip (sin contexto suficiente).
-    # Si la consulta falla → markets_with_news vacío → no filtrar nada (fail-open).
-    try:
-        from core.db import get_db as _get_db
-        from datetime import timedelta
-        _cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
-        _news_rows = (
-            _get_db()
-            .table("news_articles")
-            .select("related_market_id")
-            .gte("processed_at", _cutoff)
-            .not_.is_("related_market_id", "null")
-            .execute()
-            .data or []
-        )
-        markets_with_news = {row["related_market_id"] for row in _news_rows}
-        logger.info(f"[Ciclo] {len(markets_with_news)} mercados con noticias en los últimos 7 días")
-    except Exception as e:
-        logger.warning(f"[Ciclo] No se pudo cargar markets_with_news — filtro desactivado: {e}")
-        markets_with_news = set()
-
-    for market in batch:
-        if _stop_event.is_set():
-            break
-
-        market_id    = market.get("id")
-        yes_token_id = market.get("yes_token_id")
-        question     = market.get("question", "")
-
-        # Obtener precio actualizado desde CLOB API
-        market_price = None
-        if yes_token_id:
-            market_price = get_market_price(yes_token_id)
-
-        # Fallback al precio almacenado en el escaneo
-        if market_price is None:
-            market_price = market.get("last_price")
-
-        if market_price is None:
-            logger.debug(f"[Ciclo] Sin precio para {market_id[:16]}… — saltando")
-            continue
-
-        # Filtro 1: precios extremos — mercado casi resuelto, no hay edge real
-        if market_price < PRICE_SKIP_LOW or market_price > PRICE_SKIP_HIGH:
-            logger.info(
-                f"[Ciclo] SKIP precio extremo ({market_price:.1%}) | {question[:50]}"
-            )
-            continue
-
-        # Filtro 2: mercados especulativos sin datos objetivos (métricas de redes sociales)
-        question_lower = question.lower()
-        if any(kw in question_lower for kw in SPECULATION_KEYWORDS):
-            logger.info(
-                f"[Ciclo] SKIP keyword especulativo | {question[:50]}"
-            )
-            continue
-
-        # Anotar si este mercado tiene noticias recientes (afecta umbral de gap post-análisis)
-        has_news = bool(markets_with_news) and market_id in markets_with_news
-
-        # Análisis LLM dual
+    end_date = market.get("end_date")
+    if end_date:
         try:
-            groq_result, gemini_result, gap, should_trade = full_analysis(
+            end_dt = datetime.fromisoformat(str(end_date).replace("Z", "+00:00"))
+            days = (end_dt - datetime.now(timezone.utc)).days
+            if 7 <= days <= 60:
+                score += 25
+            else:
+                reasons.append("dias fuera 7-60")
+        except Exception:
+            reasons.append("end_date invalida")
+    else:
+        reasons.append("sin end_date")
+
+    if has_recent_news:
+        score += 20
+    else:
+        reasons.append("sin noticia 24h")
+
+    return score, reasons
+
+
+def _enqueue_market(market: dict, market_price: float, force: bool, reason: str) -> bool:
+    global _queue_counter
+    market_id = market.get("id")
+    if not market_id:
+        return False
+
+    with _queue_lock:
+        if market_id in _queued_market_ids:
+            return False
+        _queued_market_ids.add(market_id)
+        _queue_counter += 1
+        priority = 0 if force else 1
+        _llm_queue.put((priority, _queue_counter, {
+            "market": market,
+            "market_price": market_price,
+            "force": force,
+            "reason": reason,
+            "enqueued_at": datetime.now(timezone.utc).isoformat(),
+        }))
+    return True
+
+
+def _scan_loop() -> None:
+    scan_num = 0
+    db = get_db()
+
+    while not _stop_event.is_set():
+        if not run_event.wait(timeout=2.0):
+            continue
+
+        scan_num += 1
+        t0 = datetime.now(timezone.utc)
+
+        scanned = 0
+        price_changed = 0
+        queued = 0
+        skipped_quant = 0
+        new_news_count = 0
+        trades_closed = 0
+
+        try:
+            markets = get_political_markets(min_volume=50_000, max_volume=250_000, min_days_remaining=7)
+            markets = sorted(markets, key=lambda m: m.get("volume", 0), reverse=True)[:MARKETS_PER_SCAN]
+            scanned = len(markets)
+
+            # Noticias nuevas
+            articles = fetch_news(max_age_hours=6)
+            new_news_count = save_articles_to_db(articles, active_markets=markets)
+
+            recent_cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+            recent_news_rows = (
+                db.table("news_articles")
+                .select("related_market_id")
+                .gte("processed_at", recent_cutoff)
+                .not_.is_("related_market_id", "null")
+                .execute()
+                .data or []
+            )
+            markets_with_recent_news = {r["related_market_id"] for r in recent_news_rows}
+
+            for market in markets:
+                if _stop_event.is_set() or not run_event.is_set():
+                    break
+
+                market_id = market.get("id")
+                token_id = market.get("yes_token_id")
+                if not market_id:
+                    continue
+
+                market_price = get_market_price(token_id) if token_id else None
+                if market_price is None:
+                    market_price = market.get("last_price")
+                if market_price is None:
+                    continue
+
+                prev = (
+                    db.table("markets")
+                    .select("last_price,last_llm_analysis_at")
+                    .eq("id", market_id)
+                    .limit(1)
+                    .execute()
+                    .data
+                )
+                prev_price = None
+                last_llm_at = None
+                if prev:
+                    prev_price = prev[0].get("last_price")
+                    last_llm_at = prev[0].get("last_llm_analysis_at")
+
+                # Upsert mercado + snapshot
+                market["last_price"] = market_price
+                upsert_market(market)
+                save_price_snapshot(market_id, market_price, market.get("volume"))
+
+                # Cambio de precio > 5%
+                change_pct = 0.0
+                force = False
+                reason = ""
+                should_enqueue = False
+
+                if prev_price not in (None, 0):
+                    change_pct = abs((float(market_price) - float(prev_price)) / float(prev_price))
+                    if change_pct > 0.05:
+                        price_changed += 1
+                        force = True
+                        reason = "price_move"
+                        should_enqueue = True
+
+                if market_id in markets_with_recent_news:
+                    force = True
+                    reason = "news"
+                    should_enqueue = True
+
+                if not last_llm_at:
+                    force = True
+                    reason = "new_market"
+                    should_enqueue = True
+                else:
+                    try:
+                        llm_dt = datetime.fromisoformat(str(last_llm_at).replace("Z", "+00:00"))
+                        if datetime.now(timezone.utc) - llm_dt > timedelta(hours=8):
+                            reason = "cache_expired"
+                            should_enqueue = True
+                    except Exception:
+                        reason = "cache_expired"
+                        should_enqueue = True
+
+                # filtro cuantitativo pre-LLM
+                score, _reasons = _score_market(market, float(market_price), market_id in markets_with_recent_news)
+                if score < 40:
+                    skipped_quant += 1
+                    continue
+
+                if should_enqueue and _enqueue_market(market, float(market_price), force, reason or "event"):
+                    queued += 1
+
+                db.table("markets").update({
+                    "last_price": market_price,
+                    "last_price_change_pct": round(change_pct, 4),
+                    "last_price_checked_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", market_id).execute()
+
+            # P&L + reglas de salida
+            positions = db.table("positions").select("market_id, markets(yes_token_id)").execute().data or []
+            for pos in positions:
+                token_id = (pos.get("markets") or {}).get("yes_token_id")
+                if not token_id:
+                    continue
+                current_price = get_market_price(token_id)
+                if current_price is not None:
+                    update_unrealized_pnl(pos["market_id"], current_price)
+
+            trades_closed = check_exit_rules(stop_loss_pct=0.30, take_profit_pct=0.40, time_stop_days=30, time_stop_gain_pct=0.10)
+
+            # key maintenance
+            key_manager.check_cooldowns()
+            if key_manager.should_reset_daily():
+                key_manager.reset_daily_counts()
+
+            model_stats = pop_model_stats()
+            cd = key_manager.get_cooldown_counts()
+            elapsed = (datetime.now(timezone.utc) - t0).total_seconds()
+            logger.info(
+                f"[Scan #{scan_num}] {elapsed:.1f}s | Mercados={scanned} · CambioPrecio={price_changed} · "
+                f"NoticiasNuevas={new_news_count} · ColaLLM={_llm_queue.qsize()} · QuantSkip={skipped_quant} · "
+                f"CerebrasOK/Err={model_stats['cerebras_ok']}/{model_stats['cerebras_err']} · "
+                f"GeminiOK/Err={model_stats['gemini_ok']}/{model_stats['gemini_err']} · "
+                f"GroqOK/Err={model_stats['groq_ok']}/{model_stats['groq_err']} · "
+                f"Cooldowns=cerebras:{cd.get('cerebras',0)} gemini:{cd.get('gemini',0)} groq:{cd.get('groq',0)} · Trades={trades_closed}"
+            )
+
+            set_bot_status(
+                running=True,
+                cycle=scan_num,
+                markets_scanned=scanned,
+                last_cycle=datetime.now(timezone.utc).isoformat(),
+                next_cycle=(datetime.now(timezone.utc) + timedelta(seconds=SCAN_SECONDS)).isoformat(),
+            )
+
+        except Exception as e:
+            logger.error(f"[scan_loop] Error: {e}", exc_info=True)
+
+        _stop_event.wait(timeout=SCAN_SECONDS)
+
+
+def _llm_loop() -> None:
+    db = get_db()
+    while not _stop_event.is_set():
+        if not run_event.wait(timeout=2.0):
+            continue
+        try:
+            _priority, _ord, item = _llm_queue.get(timeout=1.0)
+        except Empty:
+            continue
+
+        market = item["market"]
+        market_id = market.get("id")
+        market_price = item["market_price"]
+        force = item["force"]
+
+        try:
+            enqueued_at = item.get("enqueued_at")
+            if enqueued_at:
+                try:
+                    queued_dt = datetime.fromisoformat(str(enqueued_at).replace("Z", "+00:00"))
+                    if datetime.now(timezone.utc) - queued_dt > timedelta(minutes=30):
+                        logger.info(f"[LLMQueue] Item expirado (>30m), descartando {market_id}")
+                        continue
+                except Exception:
+                    pass
+
+            token_id = market.get("yes_token_id")
+            if token_id:
+                latest_price = get_market_price(token_id)
+                if latest_price is not None:
+                    market_price = float(latest_price)
+
+            news = (
+                db.table("news_articles")
+                .select("*")
+                .eq("related_market_id", market_id)
+                .order("processed_at", desc=True)
+                .limit(5)
+                .execute()
+                .data or []
+            )
+
+            cerebras_result, gemini_result, groq_result, gap, should_trade = full_analysis(
                 market=market,
                 market_price=market_price,
-                news_articles=news_cache,
+                news_articles=news,
+                force=force,
             )
+
+            db.table("markets").update({
+                "last_llm_analysis_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", market_id).execute()
+
+            if should_trade:
+                probs = []
+                for res in (cerebras_result, gemini_result, groq_result):
+                    if res and res.get("probability_yes") is not None:
+                        probs.append(float(res["probability_yes"]))
+                if probs:
+                    prob_yes = sum(probs) / len(probs)
+                    direction = "YES" if prob_yes > market_price else "NO"
+                    groq_reasoning = (groq_result or {}).get("reasoning", "") or (gemini_result or {}).get("reasoning", "") or (cerebras_result or {}).get("reasoning", "")
+                    gemini_reasoning = (gemini_result or {}).get("reasoning", "")
+                    trade_id, _ = open_paper_trade(
+                        market_id=market_id,
+                        direction=direction,
+                        size_usd=TRADE_SIZE_USD,
+                        entry_price=market_price,
+                        llm_probability=prob_yes,
+                        gap=gap,
+                        groq_reasoning=groq_reasoning,
+                        gemini_reasoning=gemini_reasoning,
+                    )
+                    if trade_id:
+                        logger.info(f"[LLMQueue] Trade #{trade_id} abierto | {direction} | {market.get('question','')[:50]}")
+
         except Exception as e:
-            logger.error(f"[Ciclo] Error en full_analysis para {market_id[:16]}…: {e}")
-            continue
+            logger.error(f"[llm_loop] Error procesando mercado {market_id}: {e}")
+        finally:
+            with _queue_lock:
+                if market_id in _queued_market_ids:
+                    _queued_market_ids.remove(market_id)
 
-        if not should_trade:
-            continue
-
-        # Filtro 3: confianza baja → no operar aunque el gap sea grande
-        # (full_analysis ya lo chequea internamente, esto es defensa en profundidad)
-        if groq_result.get("confidence") == "low":
-            logger.info(
-                f"[Ciclo] SKIP confianza baja | {question[:50]}"
-            )
-            continue
-
-        # Filtro 4 (two-tier noticias):
-        #   - Con noticias recientes → umbral normal gap >= 15% (ya garantizado por full_analysis)
-        #   - Sin noticias recientes → exigir gap >= 20% para compensar la incertidumbre
-        if not has_news and gap < 0.20:
-            logger.info(
-                f"[Ciclo] SKIP gap {gap:.1%} insuficiente sin noticias (req. >20%) | {question[:50]}"
-            )
-            continue
-
-        # Determinar dirección del trade
-        prob_yes = groq_result.get("probability_yes")
-        if prob_yes is None:
-            continue
-
-        direction = "YES" if float(prob_yes) > market_price else "NO"
-
-        # Abrir posición
-        groq_reasoning   = groq_result.get("reasoning", "")
-        gemini_reasoning = gemini_result.get("reasoning", "") if gemini_result else None
-
-        trade_id, msg = open_paper_trade(
-            market_id        = market_id,
-            direction        = direction,
-            size_usd         = TRADE_SIZE_USD,
-            entry_price      = market_price,
-            llm_probability  = float(prob_yes),
-            gap              = gap,
-            groq_reasoning   = groq_reasoning,
-            gemini_reasoning = gemini_reasoning,
-        )
-
-        if trade_id:
-            trades_opened += 1
-            logger.info(
-                f"[Ciclo] Trade #{trade_id} abierto | {direction} {question[:40]}… "
-                f"gap={gap:.1%} @ {market_price:.2%}"
-            )
-        else:
-            logger.debug(f"[Ciclo] Trade no abierto: {msg}")
-
-        # Pausa para no saturar la API de Groq
-        time.sleep(0.5)
-
-    logger.info(f"[Ciclo] {trades_opened} trades abiertos en este ciclo")
-
-    # ── 4. Actualizar P&L no realizado ────────────────────────────────────────
-    logger.info("[Ciclo] Paso 4/5 — Actualizando P&L no realizado…")
-    try:
-        from core.db import get_db
-        db = get_db()
-        positions = db.table("positions").select("market_id, markets(yes_token_id)").execute().data or []
-
-        for pos in positions:
-            if _stop_event.is_set():
-                break
-            mid = pos.get("market_id")
-            # Intentar obtener yes_token_id desde el join con markets
-            market_info = pos.get("markets") or {}
-            token_id = market_info.get("yes_token_id")
-            if not token_id:
-                # Buscar en la lista de mercados escaneados en este ciclo
-                mkt = next((m for m in markets if m.get("id") == mid), None)
-                token_id = mkt.get("yes_token_id") if mkt else None
-
-            if not token_id:
-                continue
-
-            current_price = get_market_price(token_id)
-            if current_price is not None:
-                update_unrealized_pnl(mid, current_price)
-
-    except Exception as e:
-        logger.error(f"[Ciclo] Error actualizando P&L unrealized: {e}")
-
-    # ── 5. Stop losses ────────────────────────────────────────────────────────
-    logger.info("[Ciclo] Paso 5/5 — Revisando stop losses…")
-    try:
-        stopped = check_stop_losses(stop_loss_pct=0.30)
-        if stopped:
-            logger.warning(f"[Ciclo] {stopped} posiciones cerradas por stop loss")
-    except Exception as e:
-        logger.error(f"[Ciclo] Error en stop losses: {e}")
-
-    # ── Actualizar estado del bot ─────────────────────────────────────────────
-    now = datetime.now(timezone.utc)
-    set_bot_status(
-        running    = True,
-        cycle      = cycle_num,
-        last_cycle = now.isoformat(),
-        next_cycle = datetime.fromtimestamp(
-            now.timestamp() + CYCLE_SECONDS, tz=timezone.utc
-        ).isoformat(),
-        trades_open = trades_opened,
-    )
-
-    elapsed = (datetime.now(timezone.utc) - cycle_start).total_seconds()
-    logger.info(f"[Ciclo #{cycle_num}] Completado en {elapsed:.1f}s")
-
-
-# ─── Punto de entrada ─────────────────────────────────────────────────────────
 
 def main() -> None:
     signal.signal(signal.SIGINT, _handle_sigint)
 
-    # Iniciar Flask en hilo daemon
+    key_manager.load_keys()
+
     flask_thread = threading.Thread(target=_start_flask, daemon=True, name="flask")
     flask_thread.start()
-    time.sleep(1)  # esperar que Flask arranque
+    time.sleep(1)
+
+    scan_thread = threading.Thread(target=_scan_loop, daemon=True, name="scan-loop")
+    llm_thread = threading.Thread(target=_llm_loop, daemon=True, name="llm-loop")
+    scan_thread.start()
+    llm_thread.start()
 
     print()
     print("=" * 52)
@@ -376,43 +405,28 @@ def main() -> None:
     print("   SIMULADO -- sin fondos reales")
     print("=" * 52)
     print(f"   Dashboard -> http://localhost:{FLASK_PORT}")
-    print(f"   Ciclo     -> cada {CYCLE_SECONDS // 60} minutos")
-    print(f"   Tamano    -> ${TRADE_SIZE_USD:.0f} por posicion")
+    print("   Escaneo   -> cada 5 minutos")
+    print("   LLM Queue -> continuo (2do loop)")
     print("   Parar     -> Ctrl+C")
     print("=" * 52)
     print()
 
+    if not key_manager.has_keys():
+        logger.warning("No hay API keys configuradas")
+
     logger.info("[PolyHunt] Bot arrancado en estado PAUSADO — actívalo desde el dashboard.")
     set_bot_status(running=False)
 
-    cycle = 0
     while not _stop_event.is_set():
-        # Bloquear mientras el bot está pausado.
-        # Timeout de 5s para poder chequear _stop_event periódicamente.
         if not run_event.wait(timeout=5.0):
-            # Si stop_requested estaba activo y run_event sigue limpio, limpiar stop_requested
             if stop_requested.is_set():
                 stop_requested.clear()
                 set_bot_status(running=False)
-                logger.info("[PolyHunt] Ciclo terminado — bot pausado como se solicitó")
+                logger.info("[PolyHunt] Bot pausado como se solicitó")
             continue
         if _stop_event.is_set():
             break
-
-        cycle += 1
-        try:
-            run_cycle(cycle)
-        except Exception as e:
-            logger.error(f"[main] Error inesperado en ciclo #{cycle}: {e}", exc_info=True)
-
-        # Si se solicitó stop durante el ciclo, marcar como completamente pausado
-        if stop_requested.is_set():
-            stop_requested.clear()
-            set_bot_status(running=False)
-            logger.info("[PolyHunt] Ciclo terminado — bot pausado como se solicitó")
-
-        # Esperar hasta el próximo ciclo o hasta que se reciba señal de parada
-        _stop_event.wait(timeout=CYCLE_SECONDS)
+        time.sleep(1)
 
     set_bot_status(running=False)
     logger.info("[PolyHunt] Bot detenido correctamente.")

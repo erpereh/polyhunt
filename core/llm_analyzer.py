@@ -1,17 +1,18 @@
 """
-Análisis de mercados de predicción con Groq (LLaMA) y Gemini.
+Análisis de mercados de predicción con 3 modelos en cascada.
 
-Pipeline dual-modelo:
-  1. Groq siempre — análisis rápido (con caché 4h en Supabase)
-  2. Gemini solo si gap > 10% — análisis profundo
-  3. Si ambos discrepan > 20% entre sí → should_trade = False
+Pipeline de 3 modelos:
+  1. Cerebras (Qwen 3 235B) → screener primario ultra-rápido
+  2. Gemini 2.5 Pro → análisis profundo solo si Cerebras detecta gap >= 10%
+  3. Groq llama-3.3-70b → confirmación final solo si Gemini confirma gap >= 12%
 
-Caché inteligente:
-  - Si el mercado fue analizado con Groq hace < 4h, se reutiliza el resultado
-  - Esto reduce las llamadas diarias de ~425 a ~20-30 por ciclo
-  - El límite de 100k tokens/día de llama-3.3-70b-versatile es suficiente
+Un trade solo se abre si:
+  - Al menos 2 modelos respondieron
+  - gap_final >= 15%
+  - Ningún par de modelos discrepa > 20%
+  - Ninguno devolvió confidence = low
 
-Guarda SIEMPRE el reasoning en Supabase — es el dato más valioso.
+Caché unificada: 8 horas para los 3 modelos.
 """
 import json
 import re
@@ -19,31 +20,42 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from groq import Groq
+from openai import OpenAI
 import google.generativeai as genai
+from groq import Groq
 
-from config import GROQ_API_KEY, GEMINI_API_KEY
+from core import key_manager
 
 logger = logging.getLogger(__name__)
 
-# Clientes lazy-initialized
-_groq_client: Optional[Groq] = None
-_gemini_model = None
+_MODEL_STATS = {
+    "cerebras_ok": 0,
+    "cerebras_err": 0,
+    "gemini_ok": 0,
+    "gemini_err": 0,
+    "groq_ok": 0,
+    "groq_err": 0,
+}
 
 
-def _get_groq() -> Groq:
-    global _groq_client
-    if _groq_client is None:
-        _groq_client = Groq(api_key=GROQ_API_KEY)
-    return _groq_client
+def _bump_stat(key: str) -> None:
+    if key in _MODEL_STATS:
+        _MODEL_STATS[key] += 1
 
 
-def _get_gemini():
-    global _gemini_model
-    if _gemini_model is None:
-        genai.configure(api_key=GEMINI_API_KEY)
-        _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
-    return _gemini_model
+def pop_model_stats() -> dict:
+    stats = dict(_MODEL_STATS)
+    for k in _MODEL_STATS:
+        _MODEL_STATS[k] = 0
+    return stats
+
+# Max reintentos con diferentes keys ante 429
+MAX_RETRIES = 3
+
+# Modelos
+CEREBRAS_MODEL = "qwen-3-235b"
+GEMINI_MODEL = "gemini-2.0-flash"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 _SYSTEM_PROMPT = """Eres un analista experto en mercados de predicción (prediction markets).
@@ -94,6 +106,36 @@ def _parse_json(content: str) -> dict:
     return {}
 
 
+def _normalize_result(result: dict) -> Optional[dict]:
+    if not isinstance(result, dict):
+        return None
+    if result.get("probability_yes") is None:
+        return None
+    try:
+        prob = float(result.get("probability_yes"))
+    except (TypeError, ValueError):
+        return None
+    if prob < 0.0 or prob > 1.0:
+        return None
+
+    confidence = str(result.get("confidence", "low")).strip().lower()
+    if confidence not in {"high", "medium", "low"}:
+        confidence = "low"
+
+    resolution_risk = str(result.get("resolution_risk", "medium")).strip().lower()
+    if resolution_risk not in {"high", "medium", "low"}:
+        resolution_risk = "medium"
+
+    return {
+        "probability_yes": prob,
+        "probability_range": result.get("probability_range"),
+        "confidence": confidence,
+        "resolution_risk": resolution_risk,
+        "edge_detected": bool(result.get("edge_detected", False)),
+        "reasoning": str(result.get("reasoning") or "").strip(),
+    }
+
+
 def _build_prompt(question: str, description: str, market_price: float,
                   news_articles: list[dict]) -> str:
     """Construye el prompt de análisis con contexto de noticias."""
@@ -117,11 +159,17 @@ def _build_prompt(question: str, description: str, market_price: float,
     )
 
 
-def _get_cached_groq(market_id: str, max_age_hours: int = 4) -> Optional[dict]:
+def _get_cached_analysis(market_id: str, model: str, max_age_hours: int = 8) -> Optional[dict]:
     """
-    Busca un análisis reciente de Groq (llama-3.3-70b-versatile) en Supabase.
-    Si existe y tiene menos de max_age_hours, lo retorna como dict reutilizable.
-    Retorna None si no hay cache válido o si la consulta falla.
+    Busca un análisis reciente en Supabase para cualquier modelo.
+    
+    Args:
+        market_id: ID del mercado
+        model: nombre del modelo (e.g., "cerebras/qwen-3-235b")
+        max_age_hours: máxima antigüedad del cache (default 8h)
+    
+    Returns:
+        dict con el análisis si existe cache válido, None si no hay o falló
     """
     from core.db import get_db
     db = get_db()
@@ -131,7 +179,7 @@ def _get_cached_groq(market_id: str, max_age_hours: int = 4) -> Optional[dict]:
             db.table("llm_analyses")
             .select("probability_yes, probability_range, confidence, resolution_risk, edge_detected, reasoning, timestamp")
             .eq("market_id", market_id)
-            .eq("model", "groq/llama-3.3-70b-versatile")
+            .eq("model", model)
             .gte("timestamp", cutoff)
             .order("timestamp", desc=True)
             .limit(1)
@@ -144,7 +192,7 @@ def _get_cached_groq(market_id: str, max_age_hours: int = 4) -> Optional[dict]:
                 datetime.now(timezone.utc) - datetime.fromisoformat(ts_str)
             ).total_seconds() / 60
             logger.info(
-                f"[{datetime.now()}] Cache hit ({age_min:.0f}min) — reutilizando análisis Groq | {market_id[:16]}…"
+                f"[LLM] Cache hit ({age_min:.0f}min) — reutilizando {model} | {market_id[:16]}…"
             )
             return {
                 "probability_yes":  row.get("probability_yes"),
@@ -155,55 +203,107 @@ def _get_cached_groq(market_id: str, max_age_hours: int = 4) -> Optional[dict]:
                 "reasoning":        row.get("reasoning", ""),
             }
     except Exception as e:
-        logger.debug(f"[{datetime.now()}] Error consultando cache Groq: {e}")
+        logger.debug(f"[LLM] Error consultando cache {model}: {e}")
     return None
 
 
-def analyze_groq(question: str, description: str, market_price: float,
-                 news_articles: list[dict] = None) -> dict:
+def _save_analysis(market_id: str, model: str, result: dict,
+                   market_price: float, gap: float) -> None:
+    """Guarda análisis de LLM para calibración futura."""
+    from core.db import get_db
+    db = get_db()
+    try:
+        db.table("llm_analyses").insert({
+            "market_id":              market_id,
+            "model":                  model,
+            "probability_yes":        result.get("probability_yes"),
+            "probability_range":      result.get("probability_range"),
+            "confidence":             result.get("confidence"),
+            "resolution_risk":        result.get("resolution_risk"),
+            "edge_detected":          result.get("edge_detected", False),
+            "reasoning":              result.get("reasoning"),
+            "market_price_at_analysis": market_price,
+            "gap":                    gap,
+        }).execute()
+    except Exception as e:
+        logger.error(f"[LLM] Error guardando análisis {model}: {e}")
+
+
+def analyze_cerebras(question: str, description: str, market_price: float,
+                     news_articles: list[dict] = None) -> Optional[dict]:
     """
-    Análisis rápido con Groq (LLaMA-3.3-70B-Versatile).
-    Retorna dict con los campos de análisis, o {} si falla.
+    Análisis con Cerebras (Qwen 3 235B) — screener primario.
+    
+    Usa API OpenAI-compatible.
+    Retorna dict con los campos de análisis, o None si falla/sin keys.
     """
     if news_articles is None:
         news_articles = []
 
     prompt = _build_prompt(question, description, market_price, news_articles)
 
-    try:
-        client   = _get_groq()
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user",   "content": prompt},
-            ],
-            temperature=0.1,
-            max_tokens=600,
-        )
-        content = response.choices[0].message.content
-        result  = _parse_json(content)
+    for attempt in range(MAX_RETRIES):
+        key_data = key_manager.get_next_key("cerebras")
+        if not key_data:
+            if attempt == 0:
+                logger.warning("[LLM] No hay keys disponibles para Cerebras")
+            return None
 
-        if result and result.get("probability_yes") is not None:
-            logger.info(
-                f"[{datetime.now()}] Groq OK — prob={result['probability_yes']:.2f} "
-                f"conf={result.get('confidence','?')} | {question[:50]}"
+        try:
+            client = OpenAI(
+                base_url="https://api.cerebras.ai/v1",
+                api_key=key_data["key_value"],
             )
-        else:
-            logger.warning(f"[{datetime.now()}] Groq devolvió JSON inválido para: {question[:50]}")
+            
+            response = client.chat.completions.create(
+                model=CEREBRAS_MODEL,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user",   "content": prompt},
+                ],
+                temperature=0.1,
+                max_tokens=400,
+            )
+            
+            content = response.choices[0].message.content
+            result = _normalize_result(_parse_json(content))
 
-        return result
+            if result:
+                # Marcar éxito
+                tokens_used = response.usage.total_tokens if response.usage else 0
+                key_manager.mark_success(key_data["id"], tokens_used)
+                
+                logger.info(
+                    f"[LLM] Cerebras OK — prob={result['probability_yes']:.2f} "
+                    f"conf={result.get('confidence','?')} | {question[:50]}"
+                )
+                _bump_stat("cerebras_ok")
+                return result
+            else:
+                logger.warning(f"[LLM] Cerebras devolvió JSON inválido para: {question[:50]}")
+                _bump_stat("cerebras_err")
+                return None
 
-    except Exception as e:
-        logger.error(f"[{datetime.now()}] Error en Groq: {e}")
-        return {}
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in str(e) or "rate" in error_str or "limit" in error_str:
+                key_manager.mark_cooldown(key_data["id"], str(e)[:200])
+                logger.warning(f"[LLM] Cerebras 429 — rotando key (intento {attempt + 1}/{MAX_RETRIES})")
+                _bump_stat("cerebras_err")
+                continue
+            else:
+                logger.error(f"[LLM] Error en Cerebras: {e}")
+                _bump_stat("cerebras_err")
+                return None
+
+    return None
 
 
 def analyze_gemini(question: str, description: str, market_price: float,
-                   news_articles: list[dict] = None) -> dict:
+                   news_articles: list[dict] = None) -> Optional[dict]:
     """
-    Análisis profundo con Gemini 2.0 Flash.
-    Retorna dict con los campos de análisis, o {} si falla.
+    Análisis profundo con Gemini 2.5 Pro.
+    Retorna dict con los campos de análisis, o None si falla/sin keys.
     """
     if news_articles is None:
         news_articles = []
@@ -213,146 +313,302 @@ def analyze_gemini(question: str, description: str, market_price: float,
         question, description, market_price, news_articles
     )
 
-    try:
-        model    = _get_gemini()
-        response = model.generate_content(
-            full_prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=0.1,
-                max_output_tokens=600,
-            ),
-        )
-        content = response.text
-        result  = _parse_json(content)
+    for attempt in range(MAX_RETRIES):
+        key_data = key_manager.get_next_key("gemini")
+        if not key_data:
+            if attempt == 0:
+                logger.warning("[LLM] No hay keys disponibles para Gemini")
+            return None
 
-        if result and result.get("probability_yes") is not None:
-            logger.info(
-                f"[{datetime.now()}] Gemini OK — prob={result['probability_yes']:.2f} "
-                f"conf={result.get('confidence','?')} | {question[:50]}"
+        try:
+            genai.configure(api_key=key_data["key_value"])
+            model = genai.GenerativeModel(GEMINI_MODEL)
+            
+            response = model.generate_content(
+                full_prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.1,
+                    max_output_tokens=400,
+                ),
             )
-        else:
-            logger.warning(f"[{datetime.now()}] Gemini devolvió JSON inválido para: {question[:50]}")
+            
+            content = response.text
+            result = _normalize_result(_parse_json(content))
 
-        return result
+            if result:
+                # Marcar éxito (Gemini no da tokens fácilmente, estimar ~300)
+                key_manager.mark_success(key_data["id"], 300)
+                
+                logger.info(
+                    f"[LLM] Gemini OK — prob={result['probability_yes']:.2f} "
+                    f"conf={result.get('confidence','?')} | {question[:50]}"
+                )
+                _bump_stat("gemini_ok")
+                return result
+            else:
+                logger.warning(f"[LLM] Gemini devolvió JSON inválido para: {question[:50]}")
+                _bump_stat("gemini_err")
+                return None
 
-    except Exception as e:
-        logger.error(f"[{datetime.now()}] Error en Gemini: {e}")
-        return {}
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in str(e) or "rate" in error_str or "limit" in error_str or "quota" in error_str:
+                key_manager.mark_cooldown(key_data["id"], str(e)[:200])
+                logger.warning(f"[LLM] Gemini 429 — rotando key (intento {attempt + 1}/{MAX_RETRIES})")
+                _bump_stat("gemini_err")
+                continue
+            else:
+                logger.error(f"[LLM] Error en Gemini: {e}")
+                _bump_stat("gemini_err")
+                return None
+
+    return None
+
+
+def analyze_groq(question: str, description: str, market_price: float,
+                 news_articles: list[dict] = None) -> Optional[dict]:
+    """
+    Análisis de confirmación con Groq (LLaMA-3.3-70B-Versatile).
+    Retorna dict con los campos de análisis, o None si falla/sin keys.
+    """
+    if news_articles is None:
+        news_articles = []
+
+    prompt = _build_prompt(question, description, market_price, news_articles)
+
+    for attempt in range(MAX_RETRIES):
+        key_data = key_manager.get_next_key("groq")
+        if not key_data:
+            if attempt == 0:
+                logger.warning("[LLM] No hay keys disponibles para Groq")
+            return None
+
+        try:
+            client = Groq(api_key=key_data["key_value"])
+            
+            response = client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user",   "content": prompt},
+                ],
+                temperature=0.1,
+                max_tokens=400,
+            )
+            
+            content = response.choices[0].message.content
+            result = _normalize_result(_parse_json(content))
+
+            if result:
+                # Marcar éxito
+                tokens_used = response.usage.total_tokens if response.usage else 0
+                key_manager.mark_success(key_data["id"], tokens_used)
+                
+                logger.info(
+                    f"[LLM] Groq OK — prob={result['probability_yes']:.2f} "
+                    f"conf={result.get('confidence','?')} | {question[:50]}"
+                )
+                _bump_stat("groq_ok")
+                return result
+            else:
+                logger.warning(f"[LLM] Groq devolvió JSON inválido para: {question[:50]}")
+                _bump_stat("groq_err")
+                return None
+
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in str(e) or "rate" in error_str or "limit" in error_str:
+                key_manager.mark_cooldown(key_data["id"], str(e)[:200])
+                logger.warning(f"[LLM] Groq 429 — rotando key (intento {attempt + 1}/{MAX_RETRIES})")
+                _bump_stat("groq_err")
+                continue
+            else:
+                logger.error(f"[LLM] Error en Groq: {e}")
+                _bump_stat("groq_err")
+                return None
+
+    return None
 
 
 def full_analysis(
     market: dict,
     market_price: float,
     news_articles: list[dict] = None,
-) -> tuple[dict, Optional[dict], float, bool]:
+    force: bool = False,
+) -> tuple[Optional[dict], Optional[dict], Optional[dict], float, bool]:
     """
-    Pipeline de análisis dual-modelo completo.
-
-    Lógica:
-      - Cache primero: si Groq analizó este mercado hace < 4h, reutilizar
-      - Groq si no hay cache
-      - Gemini solo si gap LLM-mercado > 10%
-      - Si ambos modelos discrepan > 20% entre sí → should_trade = False
-      - should_trade = True requiere: gap >= 15%, confianza medium/high, resolution_risk != high
-
-    Retorna:
-      (groq_result, gemini_result_o_None, gap, should_trade)
+    Pipeline de análisis de 3 modelos en cascada.
+    
+    Args:
+        market: dict con id, question, description
+        market_price: precio actual del token YES
+        news_articles: lista de noticias recientes relevantes
+        force: True para ignorar cache (mercados con evento nuevo)
+    
+    Flujo:
+      1. Cerebras → screener primario
+         - Si cache válida y no force → usar cache
+         - Si result es None o gap < 10% → return sin Gemini
+      
+      2. Gemini → análisis profundo
+         - Solo si Cerebras detectó gap >= 10% y conf != low
+         - Si cache válida y no force → usar cache
+         - Si result es None → continuar solo con Cerebras
+      
+      3. Groq → confirmación final
+         - Solo si Gemini confirmó gap >= 12% y conf != low
+         - Si cache válida y no force → usar cache
+         - Si result es None → continuar sin Groq
+    
+    Lógica de decisión:
+      - gap_final = promedio de los modelos que respondieron
+      - should_trade = True solo si:
+        * Al menos 2 modelos respondieron
+        * gap_final >= 15%
+        * Ningún par de modelos discrepa > 20%
+        * Ninguno devolvió confidence = low
+    
+    Returns:
+        (cerebras_result, gemini_result, groq_result, gap_final, should_trade)
     """
     if news_articles is None:
         news_articles = []
-
-    # Importar aquí para evitar circular
-    from core.paper_trader import save_llm_analysis
 
     question    = market.get("question", "")
     description = market.get("description", "") or ""
     market_id   = market.get("id", "")
 
-    # ─── CACHÉ: reusar si analizado hace < 4h ────────────────────────────────
-    groq_result = _get_cached_groq(market_id, max_age_hours=4)
-    cache_hit   = groq_result is not None
+    cerebras_result = None
+    gemini_result   = None
+    groq_result     = None
 
-    # ─── GROQ: screening rápido (si no hay cache) ────────────────────────────
-    if not cache_hit:
-        groq_result = analyze_groq(question, description, market_price, news_articles)
+    # ─── CEREBRAS: screener primario ────────────────────────────────────────────
+    cerebras_model = f"cerebras/{CEREBRAS_MODEL}"
+    
+    if not force:
+        cerebras_result = _get_cached_analysis(market_id, cerebras_model, max_age_hours=8)
+    
+    if cerebras_result is None:
+        cerebras_result = analyze_cerebras(question, description, market_price, news_articles)
+        
+        if cerebras_result and cerebras_result.get("probability_yes") is not None:
+            cerebras_prob = float(cerebras_result["probability_yes"])
+            cerebras_gap = abs(cerebras_prob - market_price)
+            _save_analysis(market_id, cerebras_model, cerebras_result, market_price, cerebras_gap)
+    
+    if not cerebras_result or cerebras_result.get("probability_yes") is None:
+        logger.warning(f"[LLM] Cerebras falló para {market_id[:16]}… — saltando mercado")
+        return None, None, None, 0.0, False
 
-    if not groq_result or groq_result.get("probability_yes") is None:
-        logger.warning(f"[{datetime.now()}] Groq falló para {market_id[:16]}… — saltando mercado")
-        return {}, None, 0.0, False
+    cerebras_prob = float(cerebras_result["probability_yes"])
+    cerebras_gap  = abs(cerebras_prob - market_price)
+    cerebras_conf = cerebras_result.get("confidence", "low")
 
-    groq_prob = float(groq_result["probability_yes"])
-    gap       = abs(groq_prob - market_price)
-
-    # Guardar análisis de Groq solo si es una llamada real (no cache)
-    if not cache_hit:
-        save_llm_analysis(market_id, "groq/llama-3.3-70b-versatile", groq_result, market_price, gap)
-
-    # Si el gap es < 10%, no merece análisis profundo ni trade
-    if gap < 0.10:
+    # Si gap < 10% o confianza baja → no merece análisis profundo
+    if cerebras_gap < 0.10 or cerebras_conf == "low":
         logger.info(
-            f"[{datetime.now()}] Gap pequeño ({gap:.1%}) — sin Gemini | {question[:50]}"
+            f"[LLM] Gap pequeño ({cerebras_gap:.1%}) o conf low — sin Gemini | {question[:50]}"
         )
-        return groq_result, None, gap, False
-
-    # ─── Sanity check: precio muy bajo + Groq muy alto → Gemini obligatorio ──
-    suspicious = market_price < 0.03 and groq_prob > 0.40
+        return cerebras_result, None, None, cerebras_gap, False
 
     # ─── GEMINI: análisis profundo ────────────────────────────────────────────
-    gemini_result = analyze_gemini(question, description, market_price, news_articles)
+    gemini_model = f"gemini/{GEMINI_MODEL}"
+    
+    if not force:
+        gemini_result = _get_cached_analysis(market_id, gemini_model, max_age_hours=8)
+    
+    if gemini_result is None:
+        gemini_result = analyze_gemini(question, description, market_price, news_articles)
+        
+        if gemini_result and gemini_result.get("probability_yes") is not None:
+            gemini_prob = float(gemini_result["probability_yes"])
+            gemini_gap = abs(gemini_prob - market_price)
+            _save_analysis(market_id, gemini_model, gemini_result, market_price, gemini_gap)
+    
+    # Si Gemini no respondió, continuar solo con Cerebras
+    if gemini_result is None or gemini_result.get("probability_yes") is None:
+        logger.info(f"[LLM] Gemini no disponible — usando solo Cerebras | {question[:50]}")
+        return cerebras_result, None, None, cerebras_gap, False
 
-    if gemini_result and gemini_result.get("probability_yes") is not None:
-        gemini_prob   = float(gemini_result["probability_yes"])
-        gemini_gap    = abs(gemini_prob - market_price)
-        model_diverge = abs(groq_prob - gemini_prob)
+    gemini_prob = float(gemini_result["probability_yes"])
+    gemini_gap  = abs(gemini_prob - market_price)
+    gemini_conf = gemini_result.get("confidence", "low")
 
-        # Guardar análisis de Gemini
-        save_llm_analysis(
-            market_id, "gemini/gemini-2.0-flash",
-            gemini_result, market_price, gemini_gap,
+    # Verificar divergencia Cerebras-Gemini
+    divergence_cg = abs(cerebras_prob - gemini_prob)
+    if divergence_cg > 0.20:
+        logger.warning(
+            f"[LLM] Cerebras-Gemini divergen {divergence_cg:.1%} — no operar | {question[:50]}"
         )
+        return cerebras_result, gemini_result, None, cerebras_gap, False
 
-        # Si los modelos discrepan demasiado → no operar
-        if model_diverge > 0.20:
+    # Si Gemini gap < 12% o conf low → no llamar a Groq
+    if gemini_gap < 0.12 or gemini_conf == "low":
+        logger.info(
+            f"[LLM] Gemini gap ({gemini_gap:.1%}) < 12% o conf low — sin Groq | {question[:50]}"
+        )
+        # Decisión con 2 modelos
+        avg_prob = (cerebras_prob + gemini_prob) / 2
+        avg_gap  = abs(avg_prob - market_price)
+        should_trade = (
+            avg_gap >= 0.15
+            and cerebras_conf != "low"
+            and gemini_conf != "low"
+        )
+        return cerebras_result, gemini_result, None, avg_gap, should_trade
+
+    # ─── GROQ: confirmación final ────────────────────────────────────────────
+    groq_model = f"groq/{GROQ_MODEL}"
+    
+    if not force:
+        groq_result = _get_cached_analysis(market_id, groq_model, max_age_hours=8)
+    
+    if groq_result is None:
+        groq_result = analyze_groq(question, description, market_price, news_articles)
+        
+        if groq_result and groq_result.get("probability_yes") is not None:
+            groq_prob = float(groq_result["probability_yes"])
+            groq_gap = abs(groq_prob - market_price)
+            _save_analysis(market_id, groq_model, groq_result, market_price, groq_gap)
+
+    # ─── DECISIÓN FINAL ────────────────────────────────────────────────────────
+    probs = [cerebras_prob, gemini_prob]
+    confs = [cerebras_conf, gemini_conf]
+    
+    if groq_result and groq_result.get("probability_yes") is not None:
+        groq_prob = float(groq_result["probability_yes"])
+        groq_conf = groq_result.get("confidence", "low")
+        probs.append(groq_prob)
+        confs.append(groq_conf)
+        
+        # Verificar divergencias con Groq
+        divergence_cg = abs(cerebras_prob - groq_prob)
+        divergence_gg = abs(gemini_prob - groq_prob)
+        
+        if divergence_cg > 0.20 or divergence_gg > 0.20:
             logger.warning(
-                f"[{datetime.now()}] Modelos divergen {model_diverge:.1%} — no se abre trade | {question[:50]}"
+                f"[LLM] Divergencia con Groq (C-G:{divergence_cg:.1%}, G-G:{divergence_gg:.1%}) "
+                f"— no operar | {question[:50]}"
             )
-            return groq_result, gemini_result, gap, False
-
-        # Sanity check: Gemini debe confirmar edge si la señal era sospechosa
-        if suspicious and not gemini_result.get("edge_detected", False):
-            logger.warning(
-                f"[{datetime.now()}] Sanity check: precio bajo ({market_price:.1%}) + "
-                f"Groq alto ({groq_prob:.1%}) pero Gemini no confirma edge — rechazado | {question[:50]}"
-            )
-            return groq_result, gemini_result, gap, False
-
-        # Usar promedio ponderado (Gemini tiene más contexto)
-        avg_prob = (groq_prob + gemini_prob) / 2
-        gap      = abs(avg_prob - market_price)
-        groq_result["probability_yes"] = round(avg_prob, 4)
-
-    else:
-        # Gemini no respondió — si era señal sospechosa, bloquear por seguridad
-        if suspicious:
-            logger.warning(
-                f"[{datetime.now()}] Sanity check: Gemini no disponible para confirmar "
-                f"señal sospechosa — rechazado | {question[:50]}"
-            )
-            return groq_result, None, gap, False
-
-    # ─── Decisión de trading ──────────────────────────────────────────────────
-    confidence      = groq_result.get("confidence", "low")
-    resolution_risk = groq_result.get("resolution_risk", "high")
-
+            return cerebras_result, gemini_result, groq_result, 0.0, False
+    
+    # Calcular gap final como promedio
+    avg_prob  = sum(probs) / len(probs)
+    gap_final = abs(avg_prob - market_price)
+    
+    # Verificar que ningún modelo tenga confianza baja
+    has_low_conf = any(c == "low" for c in confs)
+    
+    # Necesitamos al menos 2 modelos (ya garantizado aquí)
     should_trade = (
-        gap >= 0.15
-        and confidence in ("high", "medium")
-        and resolution_risk != "high"
+        len(probs) >= 2
+        and gap_final >= 0.15
+        and not has_low_conf
     )
 
     logger.info(
-        f"[{datetime.now()}] Analisis completo — gap={gap:.1%} conf={confidence} "
-        f"risk={resolution_risk} should_trade={should_trade} | {question[:50]}"
+        f"[LLM] Análisis completo — {len(probs)} modelos | gap={gap_final:.1%} "
+        f"should_trade={should_trade} | {question[:50]}"
     )
 
-    return groq_result, gemini_result, gap, should_trade
+    return cerebras_result, gemini_result, groq_result, gap_final, should_trade

@@ -15,10 +15,14 @@ import logging
 import os
 
 from flask import Flask, jsonify, request, send_from_directory
+from openai import OpenAI
+import google.generativeai as genai
+from groq import Groq
 
 from core.db import get_db
 from core.paper_trader import get_dashboard_data
 from core.state import run_event, stop_requested
+from core import key_manager
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +94,11 @@ def status():
 @app.route("/api/bot/start", methods=["POST"])
 def bot_start():
     """Activa el bot. Empieza a ejecutar ciclos en el próximo tick."""
+    if not key_manager.has_keys():
+        return jsonify({
+            "ok": False,
+            "error": "No hay API keys. Añádelas desde Ajustes antes de activar el bot.",
+        }), 400
     run_event.set()
     bot_status["running"] = True
     logger.info("[API] Bot activado desde el dashboard")
@@ -178,4 +187,184 @@ def clear_logs():
         return jsonify({"ok": True})
     except Exception as e:
         logger.error(f"[API] Error borrando logs: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def _mask_key(value: str) -> str:
+    tail = (value or "")[-4:]
+    return f"****{tail}" if tail else "****"
+
+
+def _validate_key(service: str, key_value: str) -> tuple[bool, str]:
+    key_value = (key_value or "").strip()
+    if not key_value:
+        return False, "Key vacia"
+    if len(key_value) < 20:
+        return False, "Key demasiado corta"
+    try:
+        if service == "cerebras":
+            client = OpenAI(base_url="https://api.cerebras.ai/v1", api_key=key_value)
+            client.chat.completions.create(
+                model="qwen-3-235b",
+                messages=[{"role": "user", "content": "Responde ok"}],
+                max_tokens=5,
+                temperature=0,
+                timeout=15,
+            )
+            return True, "ok"
+        if service == "gemini":
+            genai.configure(api_key=key_value)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            model.generate_content(
+                "Responde ok",
+                generation_config=genai.GenerationConfig(max_output_tokens=5, temperature=0),
+                request_options={"timeout": 15},
+            )
+            return True, "ok"
+        if service == "groq":
+            client = Groq(api_key=key_value)
+            client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": "Responde ok"}],
+                max_tokens=5,
+                temperature=0,
+                timeout=15,
+            )
+            return True, "ok"
+        return False, "Servicio inválido"
+    except Exception as e:
+        return False, str(e)
+
+
+@app.route("/api/settings/keys", methods=["GET"])
+def get_settings_keys():
+    try:
+        db = get_db()
+        rows = (
+            db.table("api_keys")
+            .select("id, service, label, is_enabled, in_cooldown, cooldown_until, calls_today, tokens_today, key_value, created_at")
+            .order("created_at", desc=False)
+            .execute()
+            .data
+            or []
+        )
+        safe = []
+        for r in rows:
+            safe.append({
+                "id": r.get("id"),
+                "service": r.get("service"),
+                "label": r.get("label"),
+                "is_enabled": r.get("is_enabled", True),
+                "in_cooldown": r.get("in_cooldown", False),
+                "cooldown_until": r.get("cooldown_until"),
+                "calls_today": r.get("calls_today", 0),
+                "tokens_today": r.get("tokens_today", 0),
+                "last_4": (r.get("key_value") or "")[-4:] or "????",
+                "masked": _mask_key(r.get("key_value") or ""),
+            })
+        return jsonify({"keys": safe})
+    except Exception as e:
+        logger.error(f"Error en GET /api/settings/keys: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/settings/keys", methods=["POST"])
+def create_settings_key():
+    data = request.get_json(silent=True) or {}
+    service = (data.get("service") or "").strip().lower()
+    key_value = (data.get("key_value") or "").strip()
+    label = (data.get("label") or "").strip()
+
+    if service not in ("cerebras", "gemini", "groq"):
+        return jsonify({"ok": False, "error": "service inválido"}), 400
+    if not key_value:
+        return jsonify({"ok": False, "error": "key_value es obligatorio"}), 400
+
+    if len(key_value) > 1024:
+        return jsonify({"ok": False, "error": "key_value demasiado larga"}), 400
+
+    if len(label) > 120:
+        return jsonify({"ok": False, "error": "label demasiado larga (max 120)"}), 400
+
+    try:
+        db = get_db()
+        existing = (
+            db.table("api_keys")
+            .select("id")
+            .eq("service", service)
+            .eq("key_value", key_value)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if existing:
+            return jsonify({"ok": False, "error": "Esa key ya existe para ese servicio"}), 409
+    except Exception:
+        pass
+
+    ok, message = _validate_key(service, key_value)
+    if not ok:
+        return jsonify({"ok": False, "error": f"Validación fallida: {message}"}), 400
+
+    try:
+        created = (
+            db.table("api_keys")
+            .insert({
+                "service": service,
+                "key_value": key_value,
+                "label": label or None,
+                "is_enabled": True,
+            })
+            .execute()
+            .data
+        )
+        row = created[0]
+        key_manager.reload_keys()
+        return jsonify({
+            "ok": True,
+            "id": row.get("id"),
+            "label": row.get("label"),
+            "service": row.get("service"),
+            "last_4": key_value[-4:],
+        })
+    except Exception as e:
+        logger.error(f"Error en POST /api/settings/keys: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/settings/keys/<int:key_id>", methods=["DELETE"])
+def delete_settings_key(key_id: int):
+    try:
+        db = get_db()
+        db.table("api_keys").delete().eq("id", key_id).execute()
+        key_manager.reload_keys()
+        return jsonify({"ok": True, "id": key_id})
+    except Exception as e:
+        logger.error(f"Error en DELETE /api/settings/keys/{key_id}: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/settings/keys/<int:key_id>", methods=["PATCH"])
+def patch_settings_key(key_id: int):
+    data = request.get_json(silent=True) or {}
+    if "is_enabled" not in data:
+        return jsonify({"ok": False, "error": "is_enabled es obligatorio"}), 400
+    is_enabled = bool(data.get("is_enabled"))
+    try:
+        db = get_db()
+        db.table("api_keys").update({"is_enabled": is_enabled}).eq("id", key_id).execute()
+        key_manager.reload_keys()
+        return jsonify({"ok": True, "id": key_id, "is_enabled": is_enabled})
+    except Exception as e:
+        logger.error(f"Error en PATCH /api/settings/keys/{key_id}: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/settings/keys/status", methods=["GET"])
+def get_settings_keys_status():
+    try:
+        return jsonify({"status": key_manager.get_keys_status()})
+    except Exception as e:
+        logger.error(f"Error en GET /api/settings/keys/status: {e}")
         return jsonify({"error": str(e)}), 500

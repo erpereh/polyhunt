@@ -1,6 +1,9 @@
 """
 Configuración de PolyHunt — carga variables de entorno y las valida.
-Si falta alguna clave, indica dónde conseguirla y termina el proceso.
+
+Solo se requieren las credenciales de Supabase en .env o Railway.
+Las API keys de los proveedores LLM (Cerebras, Gemini, Groq) se
+almacenan en Supabase y se gestionan desde el dashboard.
 """
 import os
 import sys
@@ -10,15 +13,11 @@ load_dotenv()
 
 SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
-GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
 # Dónde conseguir cada clave
 _SOURCES = {
-    "SUPABASE_URL":   "Supabase Dashboard → Project Settings → API → Project URL",
-    "SUPABASE_KEY":   "Supabase Dashboard → Project Settings → API → anon public key",
-    "GROQ_API_KEY":   "console.groq.com/keys",
-    "GEMINI_API_KEY": "aistudio.google.com/app/apikey",
+    "SUPABASE_URL": "Supabase Dashboard → Project Settings → API → Project URL",
+    "SUPABASE_KEY": "Supabase Dashboard → Project Settings → API → anon public key",
 }
 
 _missing = [k for k in _SOURCES if not os.getenv(k)]

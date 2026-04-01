@@ -236,9 +236,24 @@ def update_unrealized_pnl(market_id: str, current_price: float) -> None:
         else:
             unrealized = (entry_price - current_price) / entry_price * size_usd
 
+        max_unrealized = float(pos.get("max_unrealized_pnl") or 0)
+        if unrealized > max_unrealized:
+            max_unrealized = unrealized
+
+        opened_at = pos.get("opened_at")
+        days_open = 0
+        if opened_at:
+            try:
+                opened_dt = datetime.fromisoformat(str(opened_at).replace("Z", "+00:00"))
+                days_open = max(0, (datetime.now(timezone.utc) - opened_dt).days)
+            except Exception:
+                days_open = int(pos.get("days_open") or 0)
+
         db.table("positions").update({
             "current_price":  current_price,
             "unrealized_pnl": round(unrealized, 2),
+            "max_unrealized_pnl": round(max_unrealized, 2),
+            "days_open": days_open,
         }).eq("market_id", market_id).execute()
 
     except Exception as e:
@@ -301,6 +316,81 @@ def check_stop_losses(stop_loss_pct: float = 0.30) -> int:
 
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error en check_stop_losses: {e}")
+
+    return closed
+
+
+def check_exit_rules(
+    stop_loss_pct: float = 0.30,
+    take_profit_pct: float = 0.40,
+    time_stop_days: int = 30,
+    time_stop_gain_pct: float = 0.10,
+) -> int:
+    """
+    Reglas de salida extendidas:
+      - Stop loss: pérdida >= 30%
+      - Take profit: ganancia > 40%
+      - Time stop: >30 días abierta con ganancia < 10%
+    """
+    db = get_db()
+    closed = 0
+
+    try:
+        positions = db.table("positions").select("*").execute().data or []
+        for pos in positions:
+            entry_price = float(pos.get("entry_price", 0) or 0)
+            current_price = float(pos.get("current_price", 0) or 0)
+            direction = pos.get("direction")
+            market_id = pos.get("market_id")
+            if not entry_price or not current_price or not direction or not market_id:
+                continue
+
+            if direction == "YES":
+                move_pct = (current_price - entry_price) / entry_price
+            else:
+                move_pct = (entry_price - current_price) / entry_price
+
+            opened_at = pos.get("opened_at")
+            days_open = int(pos.get("days_open") or 0)
+            if opened_at:
+                try:
+                    opened_dt = datetime.fromisoformat(str(opened_at).replace("Z", "+00:00"))
+                    days_open = max(0, (datetime.now(timezone.utc) - opened_dt).days)
+                except Exception:
+                    pass
+
+            trade_res = (
+                db.table("paper_trades")
+                .select("id")
+                .eq("market_id", market_id)
+                .eq("status", "open")
+                .limit(1)
+                .execute()
+            )
+            if not trade_res.data:
+                continue
+            trade_id = trade_res.data[0]["id"]
+
+            if move_pct <= -stop_loss_pct:
+                pnl = close_paper_trade(trade_id, current_price)
+                logger.warning(f"[Exit] Stop-loss {move_pct:.1%} | {market_id[:16]}… | P&L=${pnl or 0:.2f}")
+                closed += 1
+                continue
+
+            if move_pct > take_profit_pct:
+                pnl = close_paper_trade(trade_id, current_price)
+                logger.info(f"[Exit] Take-profit +{move_pct:.1%} | {market_id[:16]}… | P&L=${pnl or 0:.2f}")
+                closed += 1
+                continue
+
+            if days_open > time_stop_days and move_pct < time_stop_gain_pct:
+                pnl = close_paper_trade(trade_id, current_price)
+                logger.info(f"[Exit] Time-stop 30d +{move_pct:.1%} | {market_id[:16]}… | P&L=${pnl or 0:.2f}")
+                closed += 1
+                continue
+
+    except Exception as e:
+        logger.error(f"[{datetime.now()}] Error en check_exit_rules: {e}")
 
     return closed
 

@@ -6,6 +6,7 @@
 /* ─── State ─────────────────────────────────────────────────────────────────── */
 let lastData = null;
 let currentSection = 'overview';
+let settingsKeys = [];
 
 /* ─── Format Helpers ────────────────────────────────────────────────────────── */
 const fmt = {
@@ -422,6 +423,9 @@ async function refresh() {
     renderMarkets(data.markets || [], data.analyses || []);
     renderAnalyses(data.analyses || []);
     renderNews(data.news || []);
+    if (currentSection === 'settings') {
+      await refreshKeys();
+    }
 
     document.getElementById('last-update').textContent =
       'Actualizado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
@@ -429,6 +433,121 @@ async function refresh() {
   } catch (err) {
     console.error('[PolyHunt] Error de actualización:', err);
     document.getElementById('last-update').textContent = 'Error de conexión';
+  }
+}
+
+async function refreshKeys() {
+  try {
+    const r = await fetch('/api/settings/keys');
+    if (!r.ok) return;
+    const d = await r.json();
+    settingsKeys = d.keys || [];
+    renderKeysByService('cerebras');
+    renderKeysByService('gemini');
+    renderKeysByService('groq');
+  } catch (e) {
+    console.error('[PolyHunt] Error cargando keys:', e);
+  }
+}
+
+function renderKeysByService(service) {
+  const container = document.getElementById(`keys-${service}`);
+  if (!container) return;
+  const items = settingsKeys.filter(k => k.service === service);
+  if (items.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="min-height:120px;padding:16px;">
+      <div class="empty-state-title">Sin keys</div>
+      <div class="empty-state-desc">Añade una key para habilitar ${service}.</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = items.map(k => {
+    let statusCls = 'disabled';
+    let statusText = 'Deshabilitada';
+    if (k.is_enabled && k.in_cooldown) {
+      statusCls = 'cooldown';
+      const mins = cooldownMinutes(k.cooldown_until);
+      statusText = `Cooldown - ${mins}min`;
+    } else if (k.is_enabled) {
+      statusCls = 'active';
+      statusText = 'Activa';
+    }
+    return `<div class="key-row">
+      <div class="key-main">
+        <div class="key-label">${k.label || '(sin label)'}</div>
+        <div class="key-mask">${k.masked || ('****' + (k.last_4 || '????'))}</div>
+      </div>
+      <div class="key-metrics">calls:${k.calls_today || 0} · tok:${k.tokens_today || 0}</div>
+      <span class="key-badge ${statusCls}">${statusText}</span>
+      <div class="key-actions">
+        <button class="toggle-btn" onclick="toggleKey(${k.id}, ${k.is_enabled ? 'false' : 'true'})">${k.is_enabled ? 'Desactivar' : 'Activar'}</button>
+        <button class="delete-btn" onclick="deleteKey(${k.id})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cooldownMinutes(cooldownUntil) {
+  if (!cooldownUntil) return 0;
+  const dt = new Date(cooldownUntil);
+  const ms = dt.getTime() - Date.now();
+  return Math.max(0, Math.ceil(ms / 60000));
+}
+
+async function openAddKey(service) {
+  const label = prompt(`Label para key de ${service}:`, `${service}-key`);
+  if (label === null) return;
+  const keyValue = prompt(`Pega la API key completa de ${service}:`);
+  if (!keyValue) return;
+
+  try {
+    const r = await fetch('/api/settings/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service, label, key_value: keyValue })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      alert(d.error || 'No se pudo añadir la key');
+      return;
+    }
+    await refreshKeys();
+  } catch (e) {
+    alert('Error de conexión al añadir key');
+  }
+}
+
+async function deleteKey(id) {
+  if (!confirm('¿Eliminar esta key?')) return;
+  try {
+    const r = await fetch(`/api/settings/keys/${id}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      alert(d.error || 'No se pudo eliminar');
+      return;
+    }
+    await refreshKeys();
+  } catch (e) {
+    alert('Error de conexión al eliminar key');
+  }
+}
+
+async function toggleKey(id, isEnabled) {
+  try {
+    const r = await fetch(`/api/settings/keys/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_enabled: isEnabled })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      alert(d.error || 'No se pudo actualizar');
+      return;
+    }
+    await refreshKeys();
+  } catch (e) {
+    alert('Error de conexión al actualizar key');
   }
 }
 
@@ -605,10 +724,12 @@ document.addEventListener('DOMContentLoaded', () => {
   refresh();
   refreshStatus();
   refreshLogs();
+  refreshKeys();
 
   setInterval(refresh, 60_000);
   setInterval(refreshStatus, 5_000);
   setInterval(refreshLogs, 5_000);
+  setInterval(refreshKeys, 10_000);
 
   const consoleOut = document.getElementById('console-output');
   if (consoleOut) {

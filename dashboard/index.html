@@ -32,6 +32,7 @@
           <div class="nav-tab" data-section="markets" onclick="showSection('markets')">Mercados</div>
           <div class="nav-tab" data-section="analyses" onclick="showSection('analyses')">Análisis</div>
           <div class="nav-tab" data-section="news" onclick="showSection('news')">Noticias</div>
+          <div class="nav-tab" data-section="settings" onclick="showSection('settings')">Ajustes</div>
         </div>
       </div>
       <div class="topnav-right">
@@ -229,6 +230,48 @@
               <div class="empty-state-icon">◌</div>
               <div class="empty-state-title">Sin noticias procesadas</div>
               <div class="empty-state-desc">El monitor RSS procesa noticias con score de relevancia ≥ 0.3.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Sección Ajustes ───────────────────────────────────────────── -->
+      <section id="section-settings" class="hidden">
+        <div class="section-header">
+          <h2 class="section-title">Ajustes de API Keys</h2>
+        </div>
+
+        <div class="settings-grid">
+          <div class="glass-card settings-card" id="settings-cerebras">
+            <div class="card-header">
+              <span class="card-title">Cerebras</span>
+              <button class="ctrl-btn-sm" onclick="openAddKey('cerebras')">Añadir key</button>
+            </div>
+            <div class="card-body">
+              <p class="settings-note">Cada key debe ser de una cuenta distinta en cloud.cerebras.ai. El free tier da 1M tokens/día por cuenta.</p>
+              <div id="keys-cerebras" class="keys-list"></div>
+            </div>
+          </div>
+
+          <div class="glass-card settings-card" id="settings-gemini">
+            <div class="card-header">
+              <span class="card-title">Gemini</span>
+              <button class="ctrl-btn-sm" onclick="openAddKey('gemini')">Añadir key</button>
+            </div>
+            <div class="card-body">
+              <p class="settings-note">Cada key debe venir de un proyecto de Google Cloud distinto. Keys del mismo proyecto comparten quota.</p>
+              <div id="keys-gemini" class="keys-list"></div>
+            </div>
+          </div>
+
+          <div class="glass-card settings-card" id="settings-groq">
+            <div class="card-header">
+              <span class="card-title">Groq</span>
+              <button class="ctrl-btn-sm" onclick="openAddKey('groq')">Añadir key</button>
+            </div>
+            <div class="card-body">
+              <p class="settings-note">Cada key de una cuenta distinta en console.groq.com. Cada cuenta tiene 100K tokens/día.</p>
+              <div id="keys-groq" class="keys-list"></div>
             </div>
           </div>
         </div>

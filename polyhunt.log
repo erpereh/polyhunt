@@ -1,1 +1,24 @@
-2026-04-01 20:34:42 [INFO] server — [API] Logs borrados desde el dashboard
+2026-04-02 00:10:41 [INFO] server — [API] Logs borrados desde el dashboard
+2026-04-02 00:19:00 [ERROR] server — Error en GET /api/settings/keys: Server disconnected
+2026-04-02 00:19:00 [ERROR] core.paper_trader — [2026-04-02 00:19:00.629723] Error obteniendo datos dashboard: Server disconnected
+2026-04-02 00:34:00 [INFO] core.key_manager — [KeyManager] Recargando keys desde Supabase...
+2026-04-02 00:34:00 [INFO] core.key_manager — [KeyManager] Cargadas 1 keys: cerebras=0, gemini=0, groq=1
+2026-04-02 00:34:10 [INFO] core.key_manager — [KeyManager] Recargando keys desde Supabase...
+2026-04-02 00:34:10 [INFO] core.key_manager — [KeyManager] Cargadas 2 keys: cerebras=0, gemini=0, groq=2
+2026-04-02 00:34:17 [INFO] core.key_manager — [KeyManager] Recargando keys desde Supabase...
+2026-04-02 00:34:17 [INFO] core.key_manager — [KeyManager] Cargadas 3 keys: cerebras=0, gemini=0, groq=3
+2026-04-02 00:34:25 [INFO] core.key_manager — [KeyManager] Recargando keys desde Supabase...
+2026-04-02 00:34:25 [INFO] core.key_manager — [KeyManager] Cargadas 4 keys: cerebras=0, gemini=0, groq=4
+2026-04-02 00:38:36 [ERROR] server — Error en GET /api/settings/keys: Server disconnected
+2026-04-02 00:38:36 [ERROR] core.paper_trader — [2026-04-02 00:38:36.614529] Error obteniendo datos dashboard: Server disconnected
+2026-04-02 00:40:00 [ERROR] server — Error en GET /api/settings/keys: Server disconnected
+2026-04-02 00:40:00 [ERROR] core.paper_trader — [2026-04-02 00:40:00.724655] Error obteniendo datos dashboard: Server disconnected
+2026-04-02 00:42:03 [INFO] __main__ — [PolyHunt] Bot detenido correctamente.
+2026-04-02 00:42:09 [INFO] core.db — Conexión a Supabase establecida
+2026-04-02 00:42:10 [INFO] core.key_manager — [KeyManager] Cargadas 4 keys: cerebras=0, gemini=0, groq=4
+2026-04-02 00:42:11 [INFO] __main__ — [PolyHunt] Bot arrancado en estado PAUSADO — actívalo desde el dashboard.
+2026-04-02 00:43:01 [INFO] __main__ — [PolyHunt] Bot detenido correctamente.
+2026-04-02 00:46:04 [INFO] core.db — Conexión a Supabase establecida
+2026-04-02 00:46:05 [INFO] core.key_manager — [KeyManager] Cargadas 4 keys: cerebras=0, gemini=0, groq=4
+2026-04-02 00:46:06 [INFO] __main__ — [PolyHunt] Bot arrancado en estado PAUSADO — actívalo desde el dashboard.
+2026-04-02 00:46:56 [INFO] __main__ — [PolyHunt] Bot detenido correctamente.

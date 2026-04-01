@@ -1,0 +1,385 @@
+Lee el CLAUDE.md y estos archivos completos antes de empezar:
+core/llm_analyzer.py, main.py, core/paper_trader.py,
+core/state.py, server.py, dashboard/index.html,
+dashboard/app.js, dashboard/style.css
+
+Haz un plan detallado de todos los cambios antes de tocar
+ningún archivo y espera mi confirmación antes de empezar.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTEXTO GENERAL — leer con atención antes de planificar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+El bot está desplegado en Railway donde el sistema de
+archivos es efímero. No se puede escribir en .env en
+tiempo de ejecución.
+
+Arquitectura de credenciales definitiva:
+- .env y Railway → SOLO: SUPABASE_URL y SUPABASE_KEY
+- Todas las API keys de Cerebras, Gemini y Groq →
+  tabla api_keys en Supabase
+- El bot las carga al arrancar desde Supabase
+- Si no hay keys en Supabase → arrancar igualmente en
+  PAUSADO con log claro: "No hay API keys. Añádelas
+  desde Ajustes antes de activar el bot."
+
+Contexto de modelos y límites:
+- Gemini 2.0 Flash fue deprecado en febrero 2026 →
+  migrar a gemini-2.5-pro
+- Los límites de Gemini son por proyecto GCP, no por key
+  → cada key debe venir de un proyecto GCP distinto
+- Los límites de Groq son por API key → rotar keys
+  multiplica la quota directamente
+- Los límites de Cerebras son por organización (cuenta
+  personal) → cada cuenta es una organización separada
+- El usuario tendrá ~3 keys de cada proveedor
+
+Nueva arquitectura de 3 modelos en cascada:
+1. Cerebras (Qwen 3 235B) → screener primario ultra-rápido
+2. Gemini 2.5 Pro → análisis profundo solo si Cerebras
+   detecta gap >= 10%
+3. Groq llama-3.3-70b → confirmación final solo si
+   Gemini confirma gap >= 12% y confianza no es low
+Un trade solo se abre si los 3 modelos coinciden.
+Si los 3 discrepan más de 20% entre sí → no operar.
+
+Sistema event-driven para el ciclo:
+- Escaneo de precios: cada 5 minutos (sin LLM, barato)
+- Re-análisis LLM: solo cuando ocurre alguno de estos:
+  * Precio del mercado se movió > 5% desde último análisis
+  * Apareció noticia nueva relevante en RSS
+  * El mercado es nuevo (nunca analizado)
+  * La caché LLM expiró (8 horas)
+- Esto permite detectar movimientos rápido sin agotar
+  las quotas de los proveedores LLM
+
+Mercados: ampliar de 50 a 150 por ciclo de escaneo.
+Caché LLM: 8 horas para los 3 modelos.
+max_tokens: 400 en los 3 modelos.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TABLAS EXISTENTES EN SUPABASE — referencia
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Estas tablas ya existen y están vacías. No crearlas,
+solo usarlas:
+
+account — balance, total_invested, total_pnl,
+  initial_balance, updated_at
+
+markets — id, question, description, volume, end_date,
+  yes_token_id, no_token_id, last_price, status,
+  created_at, updated_at, last_price_change_pct,
+  last_llm_analysis_at, last_price_checked_at
+
+price_snapshots — id, market_id, price, volume, timestamp
+
+llm_analyses — id, market_id, model, probability_yes,
+  probability_range, confidence, resolution_risk,
+  edge_detected, reasoning, market_price_at_analysis,
+  gap, timestamp
+
+paper_trades — id, market_id, direction, size_usd,
+  entry_price, llm_probability, gap_at_entry,
+  groq_reasoning, gemini_reasoning, status, exit_price,
+  pnl, opened_at, closed_at
+
+positions — id, market_id, direction, size_usd,
+  entry_price, current_price, unrealized_pnl, opened_at,
+  max_unrealized_pnl, days_open
+
+news_articles — id, title, summary, source, url,
+  published_at, relevance_score, related_market_id,
+  processed_at
+
+api_keys — id, service (cerebras/gemini/groq),
+  key_value, label, is_enabled, in_cooldown,
+  cooldown_until, last_error, last_used_at,
+  calls_today, tokens_today, calls_reset_at, created_at
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 1 — Crear core/key_manager.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Nuevo archivo que gestiona toda la lógica de rotación
+de keys. El resto del código solo interactúa con este.
+
+Funcionalidad:
+- Al arrancar: cargar todas las keys habilitadas de
+  Supabase agrupadas por servicio (cerebras/gemini/groq)
+- get_next_key(service) → devuelve la key con menos
+  calls_today, saltando las que están en cooldown
+- mark_cooldown(key_id) → in_cooldown=True,
+  cooldown_until = ahora + 30 minutos, loggear qué key
+- mark_success(key_id) → actualizar last_used_at,
+  incrementar calls_today y tokens_today en Supabase
+- check_cooldowns() → liberar keys cuyo cooldown_until
+  ya pasó, llamar periódicamente en el loop
+- reset_daily_counts() → resetear calls_today y
+  tokens_today a 0, llamar a medianoche Pacific Time
+- reload_keys() → recargar desde Supabase sin reiniciar,
+  llamar cuando el usuario añade/elimina keys
+- Si todas las keys de un servicio están en cooldown →
+  loggear warning y devolver None
+- Las keys se guardan en memoria para no consultar
+  Supabase en cada llamada LLM
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 2 — Migrar config.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Eliminar GROQ_API_KEY y GEMINI_API_KEY
+- Solo cargar y validar SUPABASE_URL y SUPABASE_KEY
+- Actualizar mensaje de error de arranque si faltan
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 3 — Reescribir core/llm_analyzer.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tres funciones de análisis independientes:
+
+analyze_cerebras(question, description, news):
+- Modelo: qwen-3-235b (o el mejor disponible en Cerebras)
+- OpenAI-compatible: base_url = https://api.cerebras.ai/v1
+- Usa key_manager.get_next_key('cerebras')
+- Si key es None → return None
+- max_tokens: 400, temperature: 0.1
+- JSON output igual al formato actual de analyze_groq
+
+analyze_gemini(question, description, news):
+- Modelo: gemini-2.5-pro
+- Usa key_manager.get_next_key('gemini')
+- Si key es None → return None
+- max_tokens: 400, temperature: 0.1
+
+analyze_groq(question, description, news):
+- Modelo: llama-3.3-70b-versatile
+- Usa key_manager.get_next_key('groq')
+- Si key es None → return None
+- max_tokens: 400, temperature: 0.1
+
+En todas: si recibe error 429 → key_manager.mark_cooldown,
+intentar con siguiente key automáticamente (máx 3 intentos).
+
+Caché unificada en Supabase (tabla llm_analyses):
+- _get_cached_analysis(market_id, model, max_age_hours=8)
+- Si hay análisis reciente → reusar sin llamar a la API
+- Guardar siempre el modelo exacto usado
+
+full_analysis(market, market_price, news_articles,
+              force=False):
+  """
+  Pipeline de 3 modelos en cascada.
+  force=True ignora caché (para mercados con evento nuevo).
+
+  1. Cerebras → screener primario
+     - Si caché válida → usar caché
+     - Si result es None o gap < 10% → return sin Gemini
+
+  2. Gemini → análisis profundo
+     - Solo si Cerebras detectó gap >= 10% y conf != low
+     - Si caché válida → usar caché
+     - Si result es None → continuar solo con Cerebras
+
+  3. Groq → confirmación final
+     - Solo si Gemini confirmó gap >= 12% y conf != low
+     - Si caché válida → usar caché
+     - Si result es None → continuar sin Groq
+
+  Lógica de decisión:
+  - gap_final = promedio de los modelos que respondieron
+  - should_trade = True solo si:
+    * Al menos 2 modelos respondieron
+    * gap_final >= 15%
+    * Ningún par de modelos discrepa > 20%
+    * Ninguno devolvió confidence = low
+
+  Retorna: (cerebras_result, gemini_result, groq_result,
+            gap_final, should_trade)
+  """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 4 — Reescribir el loop principal en main.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Sistema event-driven con dos loops separados en threads:
+
+LOOP 1 — Escaneo de precios (cada 5 minutos, sin LLM):
+- Obtener los 150 mercados políticos activos
+- Para cada mercado:
+  * Obtener precio actual de Polymarket CLOB API
+  * Guardar price_snapshot en Supabase
+  * Calcular cambio de precio vs último conocido
+  * Si cambio > 5% → marcar mercado para re-análisis
+    con force=True
+  * Actualizar last_price y last_price_checked_at
+- Procesar nuevas noticias RSS
+- Si noticia nueva relevante → marcar mercados
+  relacionados para re-análisis con force=True
+- Aplicar filtro cuantitativo a mercados en cola
+- Actualizar P&L unrealized de posiciones abiertas
+- Ejecutar check_exit_rules()
+- check_cooldowns() del key_manager
+
+LOOP 2 — Análisis LLM (continuo, consume la cola):
+- Cola de prioridad: primero mercados con force=True,
+  luego mercados nuevos, luego caché expirada
+- Para cada mercado en cola:
+  * Ejecutar full_analysis(market, price, news, force)
+  * Si should_trade → abrir paper trade
+  * Guardar análisis en Supabase
+  * Actualizar last_llm_analysis_at en el mercado
+
+Log de observabilidad al final de cada scan de 5 min:
+[Scan #N] Xs | Mercados=X · CambioPrecio=X ·
+NoticiasNuevas=X · ColaLLM=X · CerebrasOK/Err=X/X ·
+GeminiOK/Err=X/X · GroqOK/Err=X/X ·
+Cooldowns=cerebras:X gemini:X groq:X · Trades=X
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 5 — Filtro cuantitativo pre-LLM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Antes de añadir un mercado a la cola LLM puntuar
+con señales gratuitas (0-100 puntos):
+
+- Precio en zona de incertidumbre (2%-98%): +30 pts
+- Volumen en rango $50K-$250K: +25 pts
+- Días hasta resolución entre 7 y 60: +25 pts
+- Noticia relacionada en últimas 24h: +20 pts
+
+Umbral mínimo: 40 puntos para entrar en cola LLM.
+Mercados por debajo → skip con log del motivo.
+Contabilizar en el log de observabilidad.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 6 — Reglas de salida en paper_trader.py
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ampliar check_exit_rules() con:
+
+Take-profit: P&L unrealized > +40%
+  → cerrar posición, log: "[Exit] Take-profit +XX%"
+
+Time-stop: posición abierta > 30 días con ganancia < 10%
+  → cerrar posición, log: "[Exit] Time-stop 30d +XX%"
+
+Stop-loss -30%: ya existe, mantener.
+
+En cada ciclo: actualizar max_unrealized_pnl si el
+P&L actual supera el máximo histórico de la posición.
+Actualizar days_open en cada ciclo.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 7 — Sección Ajustes en el dashboard
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Nueva página "Ajustes" (⚙) en la sidebar con el mismo
+estilo dark terminal del dashboard existente.
+
+TRES SECCIONES: Cerebras, Gemini, Groq
+
+Cada sección muestra:
+- Lista de keys: label, últimos 4 chars (****XXXX),
+  calls hoy, tokens hoy, estado con badge de color
+- Badge verde "Activa", amarillo "Cooldown - Xmin",
+  gris "Deshabilitada"
+- Botón "Añadir key": input de label + valor completo
+  → validar que la key funciona antes de guardar
+  → llamar key_manager.reload_keys() tras añadir
+- Botón "Eliminar" con confirm() nativo
+- Toggle habilitar/deshabilitar sin eliminar
+
+Notas informativas específicas por sección:
+- Cerebras: "Cada key debe ser de una cuenta distinta
+  en cloud.cerebras.ai. El free tier da 1M tokens/día
+  por cuenta."
+- Gemini: "Cada key debe venir de un proyecto de Google
+  Cloud distinto. Keys del mismo proyecto comparten quota.
+  Crea proyectos separados en aistudio.google.com."
+- Groq: "Cada key de una cuenta distinta en
+  console.groq.com. Cada cuenta tiene 100K tokens/día."
+
+ENDPOINTS NUEVOS en server.py:
+GET    /api/settings/keys
+  → lista enmascarada de todas las keys (sin key_value)
+POST   /api/settings/keys
+  body: {service, key_value, label}
+  → validar key haciendo llamada de prueba mínima
+  → guardar en Supabase
+  → llamar key_manager.reload_keys()
+  → return {ok, id, label, service}
+DELETE /api/settings/keys/:id
+  → eliminar de Supabase y de memoria del key_manager
+PATCH  /api/settings/keys/:id
+  body: {is_enabled}
+  → actualizar en Supabase y en memoria
+GET    /api/settings/keys/status
+  → estado actual de todas las keys en memoria:
+    calls_today, in_cooldown, cooldown_until
+
+SEGURIDAD ESTRICTA:
+- Nunca devolver key_value completo en ningún endpoint
+- Solo últimos 4 caracteres en todos los endpoints
+- key_value completo solo en memoria del bot y en Supabase
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PASO 8 — Verificar preparación Railway
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Verificar que railway.json tiene este contenido exacto:
+{
+  "build": { "builder": "NIXPACKS" },
+  "deploy": {
+    "startCommand": "python main.py",
+    "restartPolicyType": "ALWAYS",
+    "restartPolicyMaxRetries": 3,
+    "healthcheckPath": "/api/status",
+    "healthcheckTimeout": 30
+  }
+}
+
+Verificar en server.py:
+port = int(os.environ.get("PORT", 5000))
+app.run(host="0.0.0.0", port=port, debug=False)
+
+Verificar que no hay rutas absolutas C:/Users/Perez/
+en ningún archivo — solo rutas relativas.
+
+polyhunt.log debe crearse con ruta relativa desde
+la raíz del proyecto.
+
+Verificar .gitignore incluye:
+.env, polyhunt.log, __pycache__/, *.pyc, .DS_Store, *.db
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDEN ESTRICTO DE IMPLEMENTACIÓN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Paso 1: crear core/key_manager.py
+2. Paso 2: migrar config.py
+3. Paso 3: reescribir core/llm_analyzer.py
+4. Paso 4: reescribir loop principal main.py
+5. Paso 5: filtro cuantitativo (integrado en paso 4)
+6. Paso 6: reglas de salida en paper_trader.py
+7. Paso 7: sección Ajustes en dashboard
+8. Paso 8: verificar Railway
+
+Después de cada paso confirmar que el bot arranca
+sin errores antes de continuar con el siguiente.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VERIFICACIÓN FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Al terminar todo:
+1. Reiniciar el bot
+2. Confirmar que arranca en PAUSADO con mensaje
+   "No hay API keys configuradas"
+3. Añadir una key de Cerebras desde el dashboard
+4. Añadir una key de Gemini desde el dashboard
+5. Añadir una key de Groq desde el dashboard
+6. Activar el bot con START
+7. Mostrar el primer log de scan completo con
+   todos los contadores visibles
+8. Confirmar que los 2 loops corren en paralelo
