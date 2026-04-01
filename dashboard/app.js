@@ -568,8 +568,40 @@ async function refreshLogs() {
   } catch (_) {}
 }
 
+/* ─── Theme Toggle ──────────────────────────────────────────────────────────── */
+function getPreferredTheme() {
+  const stored = localStorage.getItem('polyhunt-theme');
+  if (stored) return stored;
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function updateThemeIcon(theme) {
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    icon.textContent = theme === 'light' ? '☾' : '☀';
+  }
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('polyhunt-theme', theme);
+  updateThemeIcon(theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  setTheme(next);
+}
+
+function initTheme() {
+  const theme = getPreferredTheme();
+  setTheme(theme);
+}
+
 /* ─── Initialize ────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   refresh();
   refreshStatus();
   refreshLogs();

@@ -9,3 +9,8 @@ dist/
 .DS_Store
 polyhunt.log
 *.db
+
+# Claude/MCP local files
+.mcp.json
+.agents/
+skills-lock.json

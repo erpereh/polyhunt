@@ -1,5 +1,0 @@
-Preparame las instrucciones para poder desplegar la pagina y bot en railway. Y lo que sea necesario para que funcione correctamente y no se pare nunca.
-
-Adapta lo que necesites para poder subirlo a railway. El commit y pull lo hago yo.
-
-Añade al gitignore lo que sea necesario.
