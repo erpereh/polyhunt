@@ -166,9 +166,33 @@ def get_logs():
     """Retorna las últimas 100 líneas del archivo polyhunt.log."""
     log_path = os.path.join(os.path.dirname(__file__), "polyhunt.log")
     try:
+        level_filter = (request.args.get("level") or "ALL").strip().upper()
+        source_filter = (request.args.get("source") or "ALL").strip().upper()
+        search_query = (request.args.get("q") or "").strip().lower()
+        try:
+            limit = int(request.args.get("limit", 100))
+        except (TypeError, ValueError):
+            limit = 100
+        limit = max(10, min(limit, 500))
+
         with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
-        return jsonify({"lines": [l.rstrip() for l in lines[-100:]]})
+
+        filtered = []
+        for raw in lines:
+            line = raw.rstrip()
+            upper = line.upper()
+
+            if level_filter in ("INFO", "WARNING", "ERROR") and f"[{level_filter}]" not in upper:
+                continue
+            if source_filter != "ALL" and f"[{source_filter}]" not in upper:
+                continue
+            if search_query and search_query not in line.lower():
+                continue
+
+            filtered.append(line)
+
+        return jsonify({"lines": filtered[-limit:]})
     except FileNotFoundError:
         return jsonify({"lines": []})
     except Exception as e:

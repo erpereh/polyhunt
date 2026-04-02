@@ -130,6 +130,35 @@
             </div>
           </div>
           <div class="console-body" id="console-body">
+            <div class="console-filters" onclick="event.stopPropagation()">
+              <select id="log-level-filter" class="console-filter-select">
+                <option value="ALL">Nivel: Todos</option>
+                <option value="INFO">Nivel: Info</option>
+                <option value="WARNING">Nivel: Warning</option>
+                <option value="ERROR">Nivel: Error</option>
+              </select>
+              <select id="log-source-filter" class="console-filter-select">
+                <option value="ALL">Fuente: Todas</option>
+                <option value="SCAN">SCAN</option>
+                <option value="LLM">LLM</option>
+                <option value="QUEUE">QUEUE</option>
+                <option value="TRADE">TRADE</option>
+                <option value="RISK">RISK</option>
+                <option value="KEYS">KEYS</option>
+                <option value="API">API</option>
+                <option value="ERR">ERR</option>
+              </select>
+              <select id="log-limit-filter" class="console-filter-select">
+                <option value="100">100 líneas</option>
+                <option value="300">300 líneas</option>
+                <option value="500">500 líneas</option>
+              </select>
+              <input id="log-search-filter" class="console-filter-input" type="text" placeholder="Buscar..." />
+              <label class="console-filter-toggle">
+                <input id="log-autoscroll-toggle" type="checkbox" checked />
+                <span>Auto-scroll</span>
+              </label>
+            </div>
             <div class="console-output" id="console-output">Esperando logs...</div>
           </div>
         </div>
@@ -206,13 +235,13 @@
             <span class="card-count" id="analyses-count">0</span>
           </div>
           <div class="card-body card-body-scroll" id="analyses-body">
-            <div class="empty-state">
-              <div class="empty-state-icon">◉</div>
-              <div class="empty-state-title">Sin análisis registrados</div>
-              <div class="empty-state-desc">Los análisis de Groq y Gemini se guardan aquí para calibración futura.</div>
+              <div class="empty-state">
+                <div class="empty-state-icon">◉</div>
+                <div class="empty-state-title">Sin análisis registrados</div>
+                <div class="empty-state-desc">Los análisis de Cerebras y Groq se guardan aquí para calibración futura.</div>
+              </div>
             </div>
           </div>
-        </div>
       </section>
 
       <!-- ─── Sección Noticias ───────────────────────────────────────────── -->

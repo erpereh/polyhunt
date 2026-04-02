@@ -9,6 +9,12 @@ let currentSection = 'overview';
 let settingsKeys = [];
 let modalState = null;
 let modalTriggerEl = null;
+let logFilters = {
+  level: 'ALL',
+  source: 'ALL',
+  limit: '100',
+  q: '',
+};
 
 function getModalEls() {
   return {
@@ -68,6 +74,10 @@ async function confirmModalAction() {
     setModalError('');
     const payload = collectData ? collectData() : undefined;
     await onConfirm(payload);
+    if (modalState) {
+      modalState.busy = false;
+      setModalBusy(false);
+    }
     closeModal();
   } catch (e) {
     setModalError(e?.message || 'Ha ocurrido un error.');
@@ -822,11 +832,76 @@ async function clearLogs() {
     const res = await fetch('/api/logs/clear', { method: 'POST' });
     if (res.ok) {
       const out = document.getElementById('console-output');
-      if (out) out.textContent = 'Logs limpiados.';
+      if (out) out.innerHTML = '<div class="log-message">Logs limpiados.</div>';
     }
   } catch (e) {
     console.error('[PolyHunt] Error al limpiar logs:', e);
   }
+}
+
+function formatLogLine(line) {
+  const safe = String(line || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  const tsMatch = safe.match(/^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})/);
+  const levelMatch = safe.match(/\[(INFO|WARNING|ERROR)\]/);
+  const sourceMatch = safe.match(/\[(SCAN|LLM|QUEUE|TRADE|RISK|KEYS|API|ERR)\]/);
+
+  const time = tsMatch ? tsMatch[1] : '--:--:--';
+  const level = levelMatch ? levelMatch[1] : 'INFO';
+  const source = sourceMatch ? sourceMatch[1] : '';
+  const levelClass = level.toLowerCase();
+
+  return `<div class="log-line">
+    <span class="log-time">${time}</span>
+    <span class="log-level ${levelClass}">${level}</span>
+    <span class="log-message">${source ? `<span class="log-source">[${source}]</span> ` : ''}${safe}</span>
+  </div>`;
+}
+
+function buildLogQuery() {
+  const params = new URLSearchParams();
+  params.set('limit', logFilters.limit || '100');
+  params.set('level', logFilters.level || 'ALL');
+  params.set('source', logFilters.source || 'ALL');
+  if (logFilters.q) params.set('q', logFilters.q);
+  return params.toString();
+}
+
+function initLogFilters() {
+  const levelEl = document.getElementById('log-level-filter');
+  const sourceEl = document.getElementById('log-source-filter');
+  const limitEl = document.getElementById('log-limit-filter');
+  const searchEl = document.getElementById('log-search-filter');
+  const autoEl = document.getElementById('log-autoscroll-toggle');
+
+  if (!levelEl || !sourceEl || !limitEl || !searchEl || !autoEl) return;
+
+  levelEl.addEventListener('change', () => {
+    logFilters.level = levelEl.value;
+    refreshLogs();
+  });
+  sourceEl.addEventListener('change', () => {
+    logFilters.source = sourceEl.value;
+    refreshLogs();
+  });
+  limitEl.addEventListener('change', () => {
+    logFilters.limit = limitEl.value;
+    refreshLogs();
+  });
+  let searchDebounce = null;
+  searchEl.addEventListener('input', () => {
+    if (searchDebounce) clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => {
+      logFilters.q = searchEl.value.trim();
+      refreshLogs();
+    }, 250);
+  });
+  autoEl.addEventListener('change', () => {
+    _consolePinned = autoEl.checked;
+  });
 }
 
 /* ─── Status Polling ────────────────────────────────────────────────────────── */
@@ -842,10 +917,15 @@ let _consolePinned = true;
 
 async function refreshLogs() {
   try {
-    const d = await fetch('/api/logs').then(r => r.json());
+    const d = await fetch('/api/logs?' + buildLogQuery()).then(r => r.json());
     const out = document.getElementById('console-output');
     if (!out) return;
-    out.textContent = (d.lines || []).join('\n') || 'Sin logs todavía...';
+    const lines = d.lines || [];
+    if (!lines.length) {
+      out.innerHTML = '<div class="log-message">Sin logs para los filtros actuales...</div>';
+      return;
+    }
+    out.innerHTML = lines.map(formatLogLine).join('');
     if (_consolePinned) out.scrollTop = out.scrollHeight;
   } catch (_) {}
 }
@@ -885,6 +965,7 @@ function initTheme() {
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initModal();
+  initLogFilters();
   refresh();
   refreshStatus();
   refreshLogs();

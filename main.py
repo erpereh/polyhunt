@@ -245,10 +245,18 @@ def _scan_loop() -> None:
                 score, _reasons = _score_market(market, float(market_price), market_id in markets_with_recent_news)
                 if score < 40:
                     skipped_quant += 1
+                    logger.info(
+                        f"[SCAN] Quant skip | market={market_id[:16]}... | score={score} | "
+                        f"reason={','.join(_reasons[:3])}"
+                    )
                     continue
 
                 if should_enqueue and _enqueue_market(market, float(market_price), force, reason or "event"):
                     queued += 1
+                    logger.info(
+                        f"[QUEUE] Enqueued | market={market_id[:16]}... | reason={reason or 'event'} | "
+                        f"force={force} | price={float(market_price):.4f}"
+                    )
 
                 db.table("markets").update({
                     "last_price": market_price,
@@ -374,7 +382,17 @@ def _llm_loop() -> None:
                         gemini_reasoning=gemini_reasoning,
                     )
                     if trade_id:
-                        logger.info(f"[LLMQueue] Trade #{trade_id} abierto | {direction} | {market.get('question','')[:50]}")
+                        logger.info(
+                            f"[TRADE] Opened | id={trade_id} | market={market_id[:16]}... | dir={direction} | "
+                            f"prob={prob_yes:.3f} | price={market_price:.3f} | gap={gap:.3f}"
+                        )
+            else:
+                c_prob = (cerebras_result or {}).get("probability_yes")
+                g_prob = (groq_result or {}).get("probability_yes")
+                logger.info(
+                    f"[LLM] No trade | market={market_id[:16]}... | c={c_prob if c_prob is not None else '-'} | "
+                    f"g={g_prob if g_prob is not None else '-'} | gap={gap:.3f}"
+                )
 
         except Exception as e:
             logger.error(f"[llm_loop] Error procesando mercado {market_id}: {e}")
