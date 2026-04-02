@@ -11,7 +11,7 @@ import logging
 import time
 from typing import Callable, TypeVar
 
-from supabase import create_client, Client, ClientOptions
+from supabase import create_client, Client
 from config import SUPABASE_URL, SUPABASE_KEY
 
 logger = logging.getLogger(__name__)
@@ -25,12 +25,8 @@ def get_db() -> Client:
     """Devuelve el cliente Supabase, creándolo solo la primera vez."""
     global _client
     if _client is None:
-        # Forzar HTTP/1.1 para evitar errores de protocolo HTTP/2 en Railway
-        options = ClientOptions(
-            httpx_client_args={"http2": False}
-        )
-        _client = create_client(SUPABASE_URL, SUPABASE_KEY, options=options)
-        logger.info("Conexión a Supabase establecida (HTTP/1.1)")
+        _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info("Conexión a Supabase establecida")
     return _client
 
 
@@ -73,6 +69,10 @@ def db_retry(
                 "remoteprotocolerror" in error_name.lower(),
                 "server disconnected" in error_msg,
                 "connectionerror" in error_name.lower(),
+                "connecterror" in error_name.lower(),
+                "readtimeout" in error_name.lower(),
+                "timeout" in error_msg,
+                "networkerror" in error_name.lower(),
                 "connection" in error_msg and "closed" in error_msg,
             ])
 

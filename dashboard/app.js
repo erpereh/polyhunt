@@ -926,7 +926,11 @@ async function refreshLogs() {
       return;
     }
     out.innerHTML = lines.map(formatLogLine).join('');
-    if (_consolePinned) out.scrollTop = out.scrollHeight;
+    if (_consolePinned) {
+      requestAnimationFrame(() => {
+        out.scrollTop = out.scrollHeight;
+      });
+    }
   } catch (_) {}
 }
 

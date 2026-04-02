@@ -105,7 +105,7 @@ def load_keys() -> dict[str, int]:
         if total > 0:
             logger.info(
                 f"[KeyManager] Cargadas {total} keys: "
-                f"cerebras={counts['cerebras']}, gemini={counts['gemini']}, groq={counts['groq']}"
+                f"cerebras={counts['cerebras']}, groq={counts['groq']}"
             )
         else:
             logger.warning(

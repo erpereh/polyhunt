@@ -1077,13 +1077,13 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
 }
 
 .console-body {
-  overflow: hidden;
-  transition: max-height var(--transition-smooth);
-  max-height: 300px;
+  overflow: visible;
+  max-height: none;
 }
 
 .console-body.collapsed {
   max-height: 0;
+  overflow: hidden;
 }
 
 .console-output {
@@ -1096,9 +1096,11 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
   height: 280px;
   overflow-y: auto;
   padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + 14px);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 .console-filters {
@@ -1897,7 +1899,7 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
     height: 204px;
     font-size: 10px;
     line-height: 1.45;
-    padding: 10px 12px;
+    padding: 10px 12px 24px;
     background: color-mix(in srgb, rgba(0, 0, 0, 0.7) 78%, var(--glass-bg-active));
   }
 

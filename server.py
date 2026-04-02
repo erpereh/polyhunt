@@ -178,6 +178,12 @@ def get_logs():
         with open(log_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
 
+        # Si el proceso está escribiendo el log en paralelo, la última línea puede
+        # quedar incompleta (sin salto de línea final). La descartamos para evitar
+        # mostrar una línea "cortada" en el dashboard.
+        if lines and not lines[-1].endswith("\n"):
+            lines = lines[:-1]
+
         filtered = []
         for raw in lines:
             line = raw.rstrip()
