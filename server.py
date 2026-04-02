@@ -20,6 +20,7 @@ from groq import Groq
 
 from core.db import get_db
 from core.paper_trader import get_dashboard_data
+from core.analytics import get_analytics_data, get_market_price_history, get_resolution_calendar
 from core.state import run_event, stop_requested
 from core import key_manager
 
@@ -86,6 +87,45 @@ def status():
         "status": current_status,
         "running": run_event.is_set(),  # mantener para compatibilidad
     })
+
+
+# ─── Analytics API ────────────────────────────────────────────────────────────
+
+@app.route("/api/analytics")
+def analytics():
+    """Retorna métricas de performance para el dashboard de Analytics."""
+    try:
+        data = get_analytics_data()
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Error en /api/analytics: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/markets/<market_id>/price-history")
+def market_price_history(market_id: str):
+    """Retorna historial de precios de un mercado para gráficos."""
+    try:
+        limit = int(request.args.get("limit", 100))
+        limit = max(10, min(limit, 500))
+        data = get_market_price_history(market_id, limit)
+        return jsonify({"history": data})
+    except Exception as e:
+        logger.error(f"Error en /api/markets/{market_id}/price-history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/calendar")
+def calendar():
+    """Retorna mercados próximos a resolver para el calendario."""
+    try:
+        days = int(request.args.get("days", 30))
+        days = max(7, min(days, 90))
+        data = get_resolution_calendar(days)
+        return jsonify({"markets": data})
+    except Exception as e:
+        logger.error(f"Error en /api/calendar: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # ─── Control del bot ──────────────────────────────────────────────────────────

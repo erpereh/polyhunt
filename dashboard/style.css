@@ -2101,3 +2101,429 @@ button, a, .nav-tab, .glass-card, .kpi-card, .news-item, .data-table tr {
   background: var(--accent);
   color: var(--bg-void);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANALYTICS SECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Analytics KPI Grid ────────────────────────────────────────────────────── */
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.analytics-kpi {
+  padding: var(--space-lg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.analytics-kpi:hover {
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px);
+}
+
+.analytics-kpi-label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.analytics-kpi-value {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.analytics-kpi-value.profit {
+  color: var(--profit);
+}
+
+.analytics-kpi-value.loss {
+  color: var(--loss);
+}
+
+/* ─── Analytics Chart ───────────────────────────────────────────────────────── */
+.analytics-chart-card {
+  margin-bottom: var(--space-md);
+}
+
+.analytics-chart-container {
+  height: 320px;
+  width: 100%;
+  position: relative;
+}
+
+/* ─── Analytics Grid (Win Rate bars) ────────────────────────────────────────── */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+.analytics-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.analytics-bar-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 50px;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.analytics-bar-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.analytics-bar-track {
+  height: 8px;
+  background: var(--glass-bg-active);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.analytics-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--violet));
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.analytics-bar-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* ─── Analytics Stats Grid ──────────────────────────────────────────────────── */
+.analytics-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.analytics-stat {
+  text-align: center;
+  padding: var(--space-md);
+  background: var(--glass-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+
+.analytics-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.analytics-stat-value.profit {
+  color: var(--profit);
+}
+
+.analytics-stat-value.loss {
+  color: var(--loss);
+}
+
+.analytics-stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CALENDAR SECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.calendar-card {
+  margin-bottom: var(--space-md);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.calendar-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.calendar-item:hover {
+  border-color: var(--accent-border);
+  transform: translateY(-2px);
+  box-shadow: var(--accent-glow);
+}
+
+.calendar-item.has-position {
+  border-color: var(--profit);
+  box-shadow: var(--profit-glow);
+}
+
+.calendar-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.calendar-days-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.calendar-days-badge.urgent {
+  background: var(--loss-dim);
+  color: var(--loss);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.calendar-days-badge.soon {
+  background: var(--warning-dim);
+  color: var(--warning);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.calendar-days-badge.normal {
+  background: var(--glass-bg-active);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.calendar-position-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--profit-dim);
+  color: var(--profit);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.calendar-item-question {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.calendar-item-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.calendar-item-price {
+  color: var(--text-secondary);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MARKET CHART MODAL
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.market-chart-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+}
+
+.market-chart-modal.hidden {
+  display: none !important;
+}
+
+.market-chart-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 10, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+[data-theme="light"] .market-chart-overlay {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+.market-chart-card {
+  position: relative;
+  z-index: 1;
+  width: min(800px, 95vw);
+  max-height: 90vh;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-hover);
+  background: linear-gradient(155deg, var(--glass-bg-hover) 0%, var(--glass-bg) 100%);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  box-shadow: 0 28px 70px rgba(5, 8, 15, 0.5);
+  overflow: hidden;
+}
+
+.market-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.market-chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+}
+
+.market-chart-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.market-chart-price {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.market-chart-volume {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.market-chart-container {
+  height: 400px;
+  width: 100%;
+  padding: var(--space-md);
+}
+
+/* ─── Responsive Analytics ──────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .analytics-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .analytics-kpi {
+    padding: var(--space-md);
+  }
+  
+  .analytics-kpi-value {
+    font-size: 1.25rem;
+  }
+  
+  .analytics-chart-container {
+    height: 240px;
+  }
+  
+  .analytics-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .analytics-stat {
+    padding: var(--space-sm);
+  }
+  
+  .analytics-stat-value {
+    font-size: 1rem;
+  }
+  
+  .analytics-bar-row {
+    grid-template-columns: 60px 1fr 45px;
+    gap: var(--space-sm);
+  }
+  
+  .calendar-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .market-chart-card {
+    width: 100%;
+  }
+  
+  .market-chart-container {
+    height: 300px;
+    padding: var(--space-sm);
+  }
+  
+  .market-chart-title {
+    font-size: 12px;
+  }
+  
+  .market-chart-price {
+    font-size: 1.2rem;
+  }
+}

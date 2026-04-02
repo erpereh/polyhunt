@@ -33,6 +33,9 @@ from core.paper_trader import (
 from core.db import get_db, db_retry
 from core.state import run_event, stop_requested
 from core import key_manager
+from core.whale_tracker import scan_market_whales, has_whale_activity
+from core.gdelt_news import process_gdelt_cycle, get_news_sentiment_for_market
+from core.market_correlator import update_all_embeddings, get_correlation_signal
 from server import app, set_bot_status
 
 logging.basicConfig(
@@ -159,9 +162,22 @@ def _scan_loop() -> None:
             markets = sorted(markets, key=lambda m: m.get("volume", 0), reverse=True)[:MARKETS_PER_SCAN]
             scanned = len(markets)
 
-            # Noticias nuevas
+            # Noticias nuevas (RSS legacy)
             articles = fetch_news(max_age_hours=6)
             new_news_count = save_articles_to_db(articles, active_markets=markets)
+
+            # GDELT News Pipeline (Fase 2)
+            try:
+                gdelt_stats = process_gdelt_cycle(markets)
+                new_news_count += gdelt_stats.get("articles_saved", 0)
+            except Exception as e:
+                logger.debug(f"[GDELT] Error en ciclo: {e}")
+
+            # Actualizar embeddings para correlación (batch pequeño por ciclo)
+            try:
+                update_all_embeddings(markets, batch_size=10)
+            except Exception as e:
+                logger.debug(f"[Correlator] Error actualizando embeddings: {e}")
 
             recent_cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
             recent_news_rows = (
@@ -208,6 +224,13 @@ def _scan_loop() -> None:
                 upsert_market(market)
                 save_price_snapshot(market_id, market_price, market.get("volume"))
 
+                # Whale Tracking (Fase 2) - cada 4h por mercado
+                whale_stats = None
+                try:
+                    whale_stats = scan_market_whales(market)
+                except Exception as e:
+                    logger.debug(f"[Whale] Error escaneando {market_id[:16]}: {e}")
+
                 # Cambio de precio > 5%
                 change_pct = 0.0
                 force = False
@@ -226,6 +249,21 @@ def _scan_loop() -> None:
                     force = True
                     reason = "news"
                     should_enqueue = True
+
+                # Whale activity trigger (Fase 2)
+                if whale_stats and whale_stats.get("alerts_detected", 0) > 0:
+                    force = True
+                    reason = "whale_activity"
+                    should_enqueue = True
+
+                # Correlation signal trigger (Fase 2)
+                try:
+                    corr_signal = get_correlation_signal(market_id)
+                    if corr_signal and corr_signal.get("confidence", 0) > 0.7:
+                        reason = f"corr_{corr_signal['signal']}"
+                        should_enqueue = True
+                except Exception:
+                    pass
 
                 if not last_llm_at:
                     force = True

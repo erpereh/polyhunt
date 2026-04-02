@@ -13,6 +13,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
+  <!-- Lightweight Charts -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -32,6 +35,7 @@
           <div class="nav-tab" data-section="markets" onclick="showSection('markets')">Mercados</div>
           <div class="nav-tab" data-section="analyses" onclick="showSection('analyses')">Análisis</div>
           <div class="nav-tab" data-section="news" onclick="showSection('news')">Noticias</div>
+          <div class="nav-tab" data-section="analytics" onclick="showSection('analytics')">Analytics</div>
           <div class="nav-tab" data-section="settings" onclick="showSection('settings')">Ajustes</div>
         </div>
       </div>
@@ -209,7 +213,26 @@
         <div class="section-header">
           <h2 class="section-title">Mercados Rastreados</h2>
         </div>
-        <div class="glass-card">
+        
+        <!-- Calendario de Resoluciones -->
+        <div class="glass-card calendar-card">
+          <div class="card-header">
+            <span class="card-title">Próximas Resoluciones</span>
+            <span class="card-count" id="calendar-count">0</span>
+          </div>
+          <div class="card-body">
+            <div class="calendar-grid" id="calendar-body">
+              <div class="empty-state" style="min-height:120px;">
+                <div class="empty-state-icon">📅</div>
+                <div class="empty-state-title">Sin resoluciones próximas</div>
+                <div class="empty-state-desc">Los mercados cercanos a resolver aparecerán aquí.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Lista de Mercados -->
+        <div class="glass-card" style="margin-top: var(--space-md);">
           <div class="card-header">
             <span class="card-title">Escáner Polymarket</span>
             <span class="card-count" id="markets-count">0</span>
@@ -259,6 +282,145 @@
               <div class="empty-state-icon">◌</div>
               <div class="empty-state-title">Sin noticias procesadas</div>
               <div class="empty-state-desc">El monitor RSS procesa noticias con score de relevancia ≥ 0.3.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Sección Analytics ───────────────────────────────────────────── -->
+      <section id="section-analytics" class="hidden">
+        <div class="section-header">
+          <h2 class="section-title">Performance Analytics</h2>
+          <div class="section-meta">
+            <span class="last-update" id="analytics-update">—</span>
+          </div>
+        </div>
+
+        <!-- KPIs de Analytics -->
+        <div class="analytics-kpi-grid">
+          <div class="analytics-kpi">
+            <div class="analytics-kpi-label">Sharpe Ratio</div>
+            <div class="analytics-kpi-value" id="analytics-sharpe">—</div>
+          </div>
+          <div class="analytics-kpi">
+            <div class="analytics-kpi-label">Max Drawdown</div>
+            <div class="analytics-kpi-value loss" id="analytics-drawdown">—</div>
+          </div>
+          <div class="analytics-kpi">
+            <div class="analytics-kpi-label">Profit Factor</div>
+            <div class="analytics-kpi-value" id="analytics-pf">—</div>
+          </div>
+          <div class="analytics-kpi">
+            <div class="analytics-kpi-label">Avg. Position</div>
+            <div class="analytics-kpi-value" id="analytics-avg-days">—</div>
+          </div>
+        </div>
+
+        <!-- Gráfico de Equity -->
+        <div class="glass-card analytics-chart-card">
+          <div class="card-header">
+            <span class="card-title">Curva de Equity</span>
+          </div>
+          <div class="card-body">
+            <div class="analytics-chart-container" id="equity-chart-container">
+              <div class="empty-state" style="min-height:280px;">
+                <div class="empty-state-icon">📈</div>
+                <div class="empty-state-title">Sin datos suficientes</div>
+                <div class="empty-state-desc">La curva de equity se mostrará cuando haya trades cerrados.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Win Rate por Modelo y Gap -->
+        <div class="analytics-grid">
+          <div class="glass-card">
+            <div class="card-header">
+              <span class="card-title">Win Rate por Modelo</span>
+            </div>
+            <div class="card-body">
+              <div class="analytics-bars" id="analytics-model-bars">
+                <div class="analytics-bar-row">
+                  <span class="analytics-bar-label">Cerebras</span>
+                  <div class="analytics-bar-track">
+                    <div class="analytics-bar-fill" id="bar-cerebras" style="width:0%"></div>
+                  </div>
+                  <span class="analytics-bar-value" id="val-cerebras">0%</span>
+                </div>
+                <div class="analytics-bar-row">
+                  <span class="analytics-bar-label">Groq</span>
+                  <div class="analytics-bar-track">
+                    <div class="analytics-bar-fill" id="bar-groq" style="width:0%"></div>
+                  </div>
+                  <span class="analytics-bar-value" id="val-groq">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-header">
+              <span class="card-title">Win Rate por Gap</span>
+            </div>
+            <div class="card-body">
+              <div class="analytics-bars" id="analytics-gap-bars">
+                <div class="analytics-bar-row">
+                  <span class="analytics-bar-label">15-20%</span>
+                  <div class="analytics-bar-track">
+                    <div class="analytics-bar-fill" id="bar-gap15" style="width:0%"></div>
+                  </div>
+                  <span class="analytics-bar-value" id="val-gap15">0%</span>
+                </div>
+                <div class="analytics-bar-row">
+                  <span class="analytics-bar-label">20-30%</span>
+                  <div class="analytics-bar-track">
+                    <div class="analytics-bar-fill" id="bar-gap20" style="width:0%"></div>
+                  </div>
+                  <span class="analytics-bar-value" id="val-gap20">0%</span>
+                </div>
+                <div class="analytics-bar-row">
+                  <span class="analytics-bar-label">30%+</span>
+                  <div class="analytics-bar-track">
+                    <div class="analytics-bar-fill" id="bar-gap30" style="width:0%"></div>
+                  </div>
+                  <span class="analytics-bar-value" id="val-gap30">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estadísticas de Trades -->
+        <div class="glass-card" style="margin-top: var(--space-md);">
+          <div class="card-header">
+            <span class="card-title">Estadísticas de Trades</span>
+          </div>
+          <div class="card-body">
+            <div class="analytics-stats-grid" id="analytics-stats">
+              <div class="analytics-stat">
+                <div class="analytics-stat-value" id="stat-total">0</div>
+                <div class="analytics-stat-label">Total Trades</div>
+              </div>
+              <div class="analytics-stat">
+                <div class="analytics-stat-value profit" id="stat-wins">0</div>
+                <div class="analytics-stat-label">Ganados</div>
+              </div>
+              <div class="analytics-stat">
+                <div class="analytics-stat-value loss" id="stat-losses">0</div>
+                <div class="analytics-stat-label">Perdidos</div>
+              </div>
+              <div class="analytics-stat">
+                <div class="analytics-stat-value profit" id="stat-best">$0</div>
+                <div class="analytics-stat-label">Mejor Trade</div>
+              </div>
+              <div class="analytics-stat">
+                <div class="analytics-stat-value loss" id="stat-worst">$0</div>
+                <div class="analytics-stat-label">Peor Trade</div>
+              </div>
+              <div class="analytics-stat">
+                <div class="analytics-stat-value" id="stat-avg-win">$0</div>
+                <div class="analytics-stat-label">Avg. Ganancia</div>
+              </div>
             </div>
           </div>
         </div>
@@ -323,6 +485,10 @@
           <span class="mb-icon">◌</span>
           <span class="mb-label">Noticias</span>
         </div>
+        <div class="nav-tab" data-section="analytics" onclick="showSection('analytics')">
+          <span class="mb-icon">📊</span>
+          <span class="mb-label">Analytics</span>
+        </div>
         <div class="nav-tab" data-section="settings" onclick="showSection('settings')">
           <span class="mb-icon">⚙</span>
           <span class="mb-label">Ajustes</span>
@@ -344,6 +510,22 @@
         <button id="app-modal-cancel" class="ctrl-btn-sm">Cancelar</button>
         <button id="app-modal-confirm" class="ctrl-btn-sm modal-confirm">Aceptar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal de Chart de Mercado -->
+  <div id="market-chart-modal" class="market-chart-modal hidden" role="dialog" aria-modal="true">
+    <div class="market-chart-overlay" onclick="closeMarketChart()"></div>
+    <div class="market-chart-card glass-card">
+      <div class="market-chart-header">
+        <h3 id="market-chart-title" class="market-chart-title">Historial de Precio</h3>
+        <button class="app-modal-close" onclick="closeMarketChart()" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="market-chart-info">
+        <span id="market-chart-price" class="market-chart-price">—</span>
+        <span id="market-chart-volume" class="market-chart-volume">Vol: —</span>
+      </div>
+      <div class="market-chart-container" id="market-chart-container"></div>
     </div>
   </div>
 

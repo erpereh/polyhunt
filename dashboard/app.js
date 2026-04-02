@@ -15,6 +15,11 @@ let logFilters = {
   limit: '100',
   q: '',
 };
+let analyticsData = null;
+let calendarData = null;
+let equityChart = null;
+let marketChart = null;
+let marketChartInstance = null;
 
 function getModalEls() {
   return {
@@ -221,6 +226,13 @@ function showSection(name) {
   });
 
   currentSection = name;
+  
+  // Refresh section-specific data
+  if (name === 'analytics') {
+    refreshAnalytics();
+  } else if (name === 'markets') {
+    refreshCalendar();
+  }
 }
 
 /* ─── Value Update with Animation ───────────────────────────────────────────── */
@@ -535,6 +547,297 @@ function renderNews(news) {
   });
 }
 
+/* ─── Render Analytics ──────────────────────────────────────────────────────── */
+async function refreshAnalytics() {
+  try {
+    const res = await fetch('/api/analytics');
+    if (!res.ok) return;
+    analyticsData = await res.json();
+    renderAnalyticsSection(analyticsData);
+  } catch (e) {
+    console.error('[PolyHunt] Error cargando analytics:', e);
+  }
+}
+
+function renderAnalyticsSection(data) {
+  if (!data) return;
+  
+  // KPIs
+  setWithFade(document.getElementById('analytics-sharpe'), data.sharpe_ratio?.toFixed(2) || '—');
+  setWithFade(document.getElementById('analytics-drawdown'), `-${data.max_drawdown?.toFixed(1) || 0}%`);
+  setWithFade(document.getElementById('analytics-pf'), data.profit_factor?.toFixed(2) || '—');
+  setWithFade(document.getElementById('analytics-avg-days'), `${data.avg_position_days?.toFixed(1) || 0}d`);
+  
+  // Win Rate por Modelo
+  const cerebras = data.win_rate_by_model?.cerebras || 0;
+  const groq = data.win_rate_by_model?.groq || 0;
+  updateBar('bar-cerebras', 'val-cerebras', cerebras);
+  updateBar('bar-groq', 'val-groq', groq);
+  
+  // Win Rate por Gap
+  const gap15 = data.win_rate_by_gap?.gap_15_20 || 0;
+  const gap20 = data.win_rate_by_gap?.gap_20_30 || 0;
+  const gap30 = data.win_rate_by_gap?.gap_30_plus || 0;
+  updateBar('bar-gap15', 'val-gap15', gap15);
+  updateBar('bar-gap20', 'val-gap20', gap20);
+  updateBar('bar-gap30', 'val-gap30', gap30);
+  
+  // Stats
+  setWithFade(document.getElementById('stat-total'), data.total_trades || 0);
+  setWithFade(document.getElementById('stat-wins'), data.total_wins || 0);
+  setWithFade(document.getElementById('stat-losses'), data.total_losses || 0);
+  setWithFade(document.getElementById('stat-best'), fmt.usd(data.best_trade || 0));
+  setWithFade(document.getElementById('stat-worst'), fmt.usd(data.worst_trade || 0));
+  setWithFade(document.getElementById('stat-avg-win'), fmt.usd(data.avg_win || 0));
+  
+  // Equity Chart
+  renderEquityChart(data.daily_pnl || []);
+  
+  // Update timestamp
+  const updateEl = document.getElementById('analytics-update');
+  if (updateEl) {
+    updateEl.textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+function updateBar(barId, valId, percentage) {
+  const bar = document.getElementById(barId);
+  const val = document.getElementById(valId);
+  if (bar) bar.style.width = `${Math.min(100, percentage)}%`;
+  if (val) val.textContent = `${percentage.toFixed(1)}%`;
+}
+
+function renderEquityChart(dailyPnl) {
+  const container = document.getElementById('equity-chart-container');
+  if (!container) return;
+  
+  if (!dailyPnl || dailyPnl.length < 2) {
+    container.innerHTML = `<div class="empty-state" style="min-height:280px;">
+      <div class="empty-state-icon">📈</div>
+      <div class="empty-state-title">Sin datos suficientes</div>
+      <div class="empty-state-desc">La curva de equity se mostrará cuando haya trades cerrados.</div>
+    </div>`;
+    return;
+  }
+  
+  // Clear previous chart
+  container.innerHTML = '';
+  
+  // Check if lightweight-charts is available
+  if (typeof LightweightCharts === 'undefined') {
+    container.innerHTML = `<div class="empty-state" style="min-height:280px;">
+      <div class="empty-state-icon">⚠</div>
+      <div class="empty-state-title">Charts no disponibles</div>
+      <div class="empty-state-desc">Error cargando la librería de gráficos.</div>
+    </div>`;
+    return;
+  }
+  
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  
+  const chartOptions = {
+    layout: {
+      background: { type: 'solid', color: 'transparent' },
+      textColor: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(15,23,42,0.6)',
+    },
+    grid: {
+      vertLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)' },
+      horzLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)' },
+    },
+    rightPriceScale: {
+      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)',
+    },
+    timeScale: {
+      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)',
+      timeVisible: true,
+    },
+    crosshair: {
+      mode: 1,
+    },
+  };
+  
+  equityChart = LightweightCharts.createChart(container, chartOptions);
+  
+  const areaSeries = equityChart.addAreaSeries({
+    topColor: isDark ? 'rgba(74, 222, 128, 0.4)' : 'rgba(22, 163, 74, 0.4)',
+    bottomColor: isDark ? 'rgba(74, 222, 128, 0.0)' : 'rgba(22, 163, 74, 0.0)',
+    lineColor: isDark ? '#4ade80' : '#16a34a',
+    lineWidth: 2,
+  });
+  
+  const chartData = dailyPnl.map(d => ({
+    time: d.date,
+    value: d.cumulative,
+  }));
+  
+  areaSeries.setData(chartData);
+  equityChart.timeScale().fitContent();
+}
+
+/* ─── Render Calendar ───────────────────────────────────────────────────────── */
+async function refreshCalendar() {
+  try {
+    const res = await fetch('/api/calendar?days=30');
+    if (!res.ok) return;
+    const data = await res.json();
+    calendarData = data.markets || [];
+    renderCalendarSection(calendarData);
+  } catch (e) {
+    console.error('[PolyHunt] Error cargando calendario:', e);
+  }
+}
+
+function renderCalendarSection(markets) {
+  const container = document.getElementById('calendar-body');
+  const countEl = document.getElementById('calendar-count');
+  
+  if (countEl) countEl.textContent = markets?.length || 0;
+  if (!container) return;
+  
+  if (!markets || markets.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="min-height:120px;">
+      <div class="empty-state-icon">📅</div>
+      <div class="empty-state-title">Sin resoluciones próximas</div>
+      <div class="empty-state-desc">Los mercados cercanos a resolver aparecerán aquí.</div>
+    </div>`;
+    return;
+  }
+  
+  container.innerHTML = markets.map(m => {
+    const daysClass = m.days_left <= 3 ? 'urgent' : m.days_left <= 7 ? 'soon' : 'normal';
+    const daysText = m.days_left === 0 ? 'Hoy' : m.days_left === 1 ? '1 día' : `${m.days_left} días`;
+    const vol = m.volume ? `$${(m.volume / 1000).toFixed(0)}K` : '—';
+    const price = m.last_price ? (m.last_price * 100).toFixed(0) + '%' : '—';
+    
+    return `<div class="calendar-item ${m.has_position ? 'has-position' : ''}" onclick="openMarketChart('${m.id}', '${(m.question || '').replace(/'/g, "\\'")}')">
+      <div class="calendar-item-header">
+        <span class="calendar-days-badge ${daysClass}">${daysText}</span>
+        ${m.has_position ? '<span class="calendar-position-badge">◎ Posición</span>' : ''}
+      </div>
+      <div class="calendar-item-question">${m.question || '—'}</div>
+      <div class="calendar-item-meta">
+        <span class="calendar-item-price">YES: ${price}</span>
+        <span>Vol: ${vol}</span>
+        <span>${fmt.dateShort(m.end_date)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ─── Market Chart Modal ────────────────────────────────────────────────────── */
+async function openMarketChart(marketId, question) {
+  const modal = document.getElementById('market-chart-modal');
+  const titleEl = document.getElementById('market-chart-title');
+  const priceEl = document.getElementById('market-chart-price');
+  const volumeEl = document.getElementById('market-chart-volume');
+  const container = document.getElementById('market-chart-container');
+  
+  if (!modal || !container) return;
+  
+  // Show modal
+  modal.classList.remove('hidden');
+  if (titleEl) titleEl.textContent = question || 'Historial de Precio';
+  if (priceEl) priceEl.textContent = 'Cargando...';
+  if (volumeEl) volumeEl.textContent = '';
+  container.innerHTML = '<div class="empty-state" style="min-height:300px;"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Cargando historial...</div></div>';
+  
+  try {
+    const res = await fetch(`/api/markets/${marketId}/price-history?limit=200`);
+    if (!res.ok) throw new Error('Error cargando historial');
+    const data = await res.json();
+    const history = data.history || [];
+    
+    if (history.length === 0) {
+      container.innerHTML = `<div class="empty-state" style="min-height:300px;">
+        <div class="empty-state-icon">📊</div>
+        <div class="empty-state-title">Sin historial</div>
+        <div class="empty-state-desc">No hay snapshots de precio para este mercado.</div>
+      </div>`;
+      return;
+    }
+    
+    // Update info
+    const lastPoint = history[history.length - 1];
+    if (priceEl) priceEl.textContent = (lastPoint.price * 100).toFixed(1) + '%';
+    if (volumeEl) volumeEl.textContent = lastPoint.volume ? `Vol: $${(lastPoint.volume / 1000).toFixed(0)}K` : '';
+    
+    // Render chart
+    container.innerHTML = '';
+    renderMarketChartInContainer(container, history);
+    
+  } catch (e) {
+    console.error('[PolyHunt] Error cargando chart:', e);
+    container.innerHTML = `<div class="empty-state" style="min-height:300px;">
+      <div class="empty-state-icon">⚠</div>
+      <div class="empty-state-title">Error</div>
+      <div class="empty-state-desc">${e.message}</div>
+    </div>`;
+  }
+}
+
+function renderMarketChartInContainer(container, history) {
+  if (typeof LightweightCharts === 'undefined') {
+    container.innerHTML = `<div class="empty-state" style="min-height:300px;">
+      <div class="empty-state-icon">⚠</div>
+      <div class="empty-state-title">Charts no disponibles</div>
+    </div>`;
+    return;
+  }
+  
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  
+  const chartOptions = {
+    layout: {
+      background: { type: 'solid', color: 'transparent' },
+      textColor: isDark ? 'rgba(255,255,255,0.6)' : 'rgba(15,23,42,0.6)',
+    },
+    grid: {
+      vertLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)' },
+      horzLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(15,23,42,0.05)' },
+    },
+    rightPriceScale: {
+      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)',
+    },
+    timeScale: {
+      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)',
+      timeVisible: true,
+      secondsVisible: false,
+    },
+    crosshair: {
+      mode: 1,
+    },
+  };
+  
+  marketChartInstance = LightweightCharts.createChart(container, chartOptions);
+  
+  const lineSeries = marketChartInstance.addLineSeries({
+    color: isDark ? '#a78bfa' : '#7c3aed',
+    lineWidth: 2,
+  });
+  
+  // Convert to chart format
+  const chartData = history.map(h => {
+    const ts = h.timestamp ? new Date(h.timestamp).getTime() / 1000 : Date.now() / 1000;
+    return {
+      time: ts,
+      value: h.price * 100, // Convert to percentage
+    };
+  });
+  
+  lineSeries.setData(chartData);
+  marketChartInstance.timeScale().fitContent();
+}
+
+function closeMarketChart() {
+  const modal = document.getElementById('market-chart-modal');
+  if (modal) modal.classList.add('hidden');
+  
+  if (marketChartInstance) {
+    marketChartInstance.remove();
+    marketChartInstance = null;
+  }
+}
+
 /* ─── Main Refresh ──────────────────────────────────────────────────────────── */
 async function refresh() {
   try {
@@ -555,8 +858,12 @@ async function refresh() {
     renderMarkets(data.markets || [], data.analyses || []);
     renderAnalyses(data.analyses || []);
     renderNews(data.news || []);
+    
+    // Refresh section-specific data
     if (currentSection === 'settings') {
       await refreshKeys();
+    } else if (currentSection === 'markets') {
+      await refreshCalendar();
     }
 
     document.getElementById('last-update').textContent =
@@ -974,11 +1281,15 @@ document.addEventListener('DOMContentLoaded', () => {
   refreshStatus();
   refreshLogs();
   refreshKeys();
+  refreshAnalytics();
+  refreshCalendar();
 
   setInterval(refresh, 60_000);
   setInterval(refreshStatus, 5_000);
   setInterval(refreshLogs, 5_000);
   setInterval(refreshKeys, 10_000);
+  setInterval(refreshAnalytics, 120_000); // Every 2 minutes
+  setInterval(refreshCalendar, 300_000);  // Every 5 minutes
 
   const consoleOut = document.getElementById('console-output');
   if (consoleOut) {
