@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from core.db import get_db
+from core.db import get_db, db_retry
 
 logger = logging.getLogger(__name__)
 
@@ -23,17 +23,20 @@ def upsert_market(market_data: dict) -> None:
     """Guarda o actualiza un mercado en Supabase."""
     db = get_db()
     try:
-        db.table("markets").upsert({
-            "id":          market_data["id"],
-            "question":    market_data["question"],
-            "description": market_data.get("description", ""),
-            "volume":      market_data.get("volume", 0),
-            "end_date":    market_data.get("end_date"),
-            "yes_token_id": market_data.get("yes_token_id"),
-            "no_token_id":  market_data.get("no_token_id"),
-            "last_price":   market_data.get("last_price"),
-            "updated_at":  datetime.now(timezone.utc).isoformat(),
-        }).execute()
+        db_retry(
+            lambda: db.table("markets").upsert({
+                "id":          market_data["id"],
+                "question":    market_data["question"],
+                "description": market_data.get("description", ""),
+                "volume":      market_data.get("volume", 0),
+                "end_date":    market_data.get("end_date"),
+                "yes_token_id": market_data.get("yes_token_id"),
+                "no_token_id":  market_data.get("no_token_id"),
+                "last_price":   market_data.get("last_price"),
+                "updated_at":  datetime.now(timezone.utc).isoformat(),
+            }).execute(),
+            context=f"upsert_market({market_data.get('id', '?')[:16]})"
+        )
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error guardando mercado {market_data.get('id', '?')}: {e}")
 
@@ -44,11 +47,14 @@ def save_price_snapshot(market_id: str, price: float, volume: float = None) -> N
     """Guarda snapshot de precio para historial de backtesting."""
     db = get_db()
     try:
-        db.table("price_snapshots").insert({
-            "market_id": market_id,
-            "price":     price,
-            "volume":    volume,
-        }).execute()
+        db_retry(
+            lambda: db.table("price_snapshots").insert({
+                "market_id": market_id,
+                "price":     price,
+                "volume":    volume,
+            }).execute(),
+            context=f"save_price_snapshot({market_id[:16]})"
+        )
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error guardando snapshot {market_id}: {e}")
 
@@ -60,18 +66,21 @@ def save_llm_analysis(market_id: str, model: str, result: dict,
     """Guarda análisis de LLM para calibración futura. Siempre guardar."""
     db = get_db()
     try:
-        db.table("llm_analyses").insert({
-            "market_id":              market_id,
-            "model":                  model,
-            "probability_yes":        result.get("probability_yes"),
-            "probability_range":      result.get("probability_range"),
-            "confidence":             result.get("confidence"),
-            "resolution_risk":        result.get("resolution_risk"),
-            "edge_detected":          result.get("edge_detected", False),
-            "reasoning":              result.get("reasoning"),
-            "market_price_at_analysis": market_price,
-            "gap":                    gap,
-        }).execute()
+        db_retry(
+            lambda: db.table("llm_analyses").insert({
+                "market_id":              market_id,
+                "model":                  model,
+                "probability_yes":        result.get("probability_yes"),
+                "probability_range":      result.get("probability_range"),
+                "confidence":             result.get("confidence"),
+                "resolution_risk":        result.get("resolution_risk"),
+                "edge_detected":          result.get("edge_detected", False),
+                "reasoning":              result.get("reasoning"),
+                "market_price_at_analysis": market_price,
+                "gap":                    gap,
+            }).execute(),
+            context=f"save_llm_analysis({model})"
+        )
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error guardando análisis LLM {model}: {e}")
 
@@ -116,34 +125,43 @@ def open_paper_trade(
             return None, "Balance insuficiente"
 
         # Registrar el trade
-        trade = db.table("paper_trades").insert({
-            "market_id":       market_id,
-            "direction":       direction,
-            "size_usd":        round(size_usd, 2),
-            "entry_price":     entry_price,
-            "llm_probability": llm_probability,
-            "gap_at_entry":    gap,
-            "groq_reasoning":  groq_reasoning,
-            "gemini_reasoning": gemini_reasoning,
-        }).execute()
+        trade = db_retry(
+            lambda: db.table("paper_trades").insert({
+                "market_id":       market_id,
+                "direction":       direction,
+                "size_usd":        round(size_usd, 2),
+                "entry_price":     entry_price,
+                "llm_probability": llm_probability,
+                "gap_at_entry":    gap,
+                "groq_reasoning":  groq_reasoning,
+                "gemini_reasoning": gemini_reasoning,
+            }).execute(),
+            context=f"open_paper_trade.insert({market_id[:16]})"
+        )
 
         trade_id = trade.data[0]["id"]
 
         # Descontar del balance
-        db.table("account").update({
-            "balance":    round(balance - size_usd, 2),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", 1).execute()
+        db_retry(
+            lambda: db.table("account").update({
+                "balance":    round(balance - size_usd, 2),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", 1).execute(),
+            context="open_paper_trade.update_account"
+        )
 
         # Crear posición abierta
-        db.table("positions").upsert({
-            "market_id":     market_id,
-            "direction":     direction,
-            "size_usd":      round(size_usd, 2),
-            "entry_price":   entry_price,
-            "current_price": entry_price,
-            "unrealized_pnl": 0,
-        }).execute()
+        db_retry(
+            lambda: db.table("positions").upsert({
+                "market_id":     market_id,
+                "direction":     direction,
+                "size_usd":      round(size_usd, 2),
+                "entry_price":   entry_price,
+                "current_price": entry_price,
+                "unrealized_pnl": 0,
+            }).execute(),
+            context=f"open_paper_trade.upsert_position({market_id[:16]})"
+        )
 
         logger.info(
             f"[{datetime.now()}] Trade abierto #{trade_id} | {direction} {market_id[:16]}… "
@@ -187,26 +205,35 @@ def close_paper_trade(trade_id: int, exit_price: float) -> Optional[float]:
         pnl = round(pnl, 2)
 
         # Cerrar el trade
-        db.table("paper_trades").update({
-            "status":    "closed",
-            "exit_price": exit_price,
-            "pnl":       pnl,
-            "closed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", trade_id).execute()
+        db_retry(
+            lambda: db.table("paper_trades").update({
+                "status":    "closed",
+                "exit_price": exit_price,
+                "pnl":       pnl,
+                "closed_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", trade_id).execute(),
+            context=f"close_paper_trade.update_trade({trade_id})"
+        )
 
         # Devolver capital + P&L al balance
         account     = db.table("account").select("balance, total_pnl").eq("id", 1).single().execute()
         new_balance = round(float(account.data["balance"]) + size_usd + pnl, 2)
         new_total   = round(float(account.data["total_pnl"]) + pnl, 2)
 
-        db.table("account").update({
-            "balance":    new_balance,
-            "total_pnl":  new_total,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", 1).execute()
+        db_retry(
+            lambda: db.table("account").update({
+                "balance":    new_balance,
+                "total_pnl":  new_total,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", 1).execute(),
+            context="close_paper_trade.update_account"
+        )
 
         # Eliminar posición abierta
-        db.table("positions").delete().eq("market_id", market_id).execute()
+        db_retry(
+            lambda: db.table("positions").delete().eq("market_id", market_id).execute(),
+            context=f"close_paper_trade.delete_position({market_id[:16]})"
+        )
 
         emoji = "✅" if pnl >= 0 else "🔴"
         logger.info(f"[{datetime.now()}] {emoji} Trade cerrado #{trade_id} | P&L: ${pnl:+.2f}")
@@ -249,12 +276,15 @@ def update_unrealized_pnl(market_id: str, current_price: float) -> None:
             except Exception:
                 days_open = int(pos.get("days_open") or 0)
 
-        db.table("positions").update({
-            "current_price":  current_price,
-            "unrealized_pnl": round(unrealized, 2),
-            "max_unrealized_pnl": round(max_unrealized, 2),
-            "days_open": days_open,
-        }).eq("market_id", market_id).execute()
+        db_retry(
+            lambda: db.table("positions").update({
+                "current_price":  current_price,
+                "unrealized_pnl": round(unrealized, 2),
+                "max_unrealized_pnl": round(max_unrealized, 2),
+                "days_open": days_open,
+            }).eq("market_id", market_id).execute(),
+            context=f"update_unrealized_pnl({market_id[:16]})"
+        )
 
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error actualizando P&L unrealized {market_id}: {e}")
@@ -409,15 +439,18 @@ def save_news_article(
     """Guarda noticia procesada. Usa url como clave única para evitar duplicados."""
     db = get_db()
     try:
-        db.table("news_articles").upsert({
-            "title":             title,
-            "summary":           summary,
-            "source":            source,
-            "url":               url,
-            "published_at":      published_at,
-            "relevance_score":   relevance_score,
-            "related_market_id": related_market_id,
-        }, on_conflict="url").execute()
+        db_retry(
+            lambda: db.table("news_articles").upsert({
+                "title":             title,
+                "summary":           summary,
+                "source":            source,
+                "url":               url,
+                "published_at":      published_at,
+                "relevance_score":   relevance_score,
+                "related_market_id": related_market_id,
+            }, on_conflict="url").execute(),
+            context="save_news_article"
+        )
     except Exception as e:
         logger.error(f"[{datetime.now()}] Error guardando noticia: {e}")
 

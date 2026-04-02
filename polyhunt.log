@@ -2,3 +2,5 @@
 2026-04-02 13:01:25 [INFO] core.db — Conexión a Supabase establecida
 2026-04-02 13:01:26 [ERROR] core.key_manager — [KeyManager] Error cargando keys: 'gemini'
 2026-04-02 13:01:27 [INFO] __main__ — [PolyHunt] Bot arrancado en estado PAUSADO — actívalo desde el dashboard.
+2026-04-02 14:51:58 [ERROR] server — Error en GET /api/settings/keys: Server disconnected
+2026-04-02 14:51:58 [ERROR] core.paper_trader — [2026-04-02 14:51:58.540431] Error obteniendo datos dashboard: Server disconnected

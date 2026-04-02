@@ -30,7 +30,7 @@ from core.paper_trader import (
     upsert_market,
     save_price_snapshot,
 )
-from core.db import get_db
+from core.db import get_db, db_retry
 from core.state import run_event, stop_requested
 from core import key_manager
 from server import app, set_bot_status
@@ -258,12 +258,15 @@ def _scan_loop() -> None:
                         f"force={force} | price={float(market_price):.4f}"
                     )
 
-                db.table("markets").update({
-                    "last_price": market_price,
-                    "last_price_change_pct": round(change_pct, 4),
-                    "last_price_checked_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
-                }).eq("id", market_id).execute()
+                db_retry(
+                    lambda mid=market_id, mp=market_price, cpct=change_pct: db.table("markets").update({
+                        "last_price": mp,
+                        "last_price_change_pct": round(cpct, 4),
+                        "last_price_checked_at": datetime.now(timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }).eq("id", mid).execute(),
+                    context=f"scan_loop.update_market({market_id[:16]})"
+                )
 
             # P&L + reglas de salida
             positions = db.table("positions").select("market_id, markets(yes_token_id)").execute().data or []
@@ -356,10 +359,13 @@ def _llm_loop() -> None:
                 force=force,
             )
 
-            db.table("markets").update({
-                "last_llm_analysis_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }).eq("id", market_id).execute()
+            db_retry(
+                lambda mid=market_id: db.table("markets").update({
+                    "last_llm_analysis_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", mid).execute(),
+                context=f"llm_loop.update_market({market_id[:16]})"
+            )
 
             if should_trade:
                 probs = []
