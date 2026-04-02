@@ -1,1 +1,4 @@
-2026-04-02 01:32:38 [INFO] server — [API] Logs borrados desde el dashboard
+2026-04-02 02:05:36 [INFO] server — [API] Logs borrados desde el dashboard
+2026-04-02 13:01:25 [INFO] core.db — Conexión a Supabase establecida
+2026-04-02 13:01:26 [ERROR] core.key_manager — [KeyManager] Error cargando keys: 'gemini'
+2026-04-02 13:01:27 [INFO] __main__ — [PolyHunt] Bot arrancado en estado PAUSADO — actívalo desde el dashboard.
