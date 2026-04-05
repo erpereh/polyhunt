@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 PACIFIC_TZ = ZoneInfo("America/Los_Angeles")
 
 # Duración del cooldown en minutos
-COOLDOWN_MINUTES = 30
+COOLDOWN_MINUTES = 15
 
 # Cache en memoria de las keys agrupadas por servicio
 # Estructura: { "cerebras": [key_dict, ...], "groq": [...] }

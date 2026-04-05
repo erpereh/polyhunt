@@ -76,6 +76,12 @@ VARIANCE_TEMPERATURE = 0.7         # Temperature para permitir variación
 REASONING_OVERLAP_THRESHOLD = 0.30 # Min overlap de keywords entre modelos
 PLATT_MIN_SAMPLES = 50             # Mínimo de datos para entrenar calibrador
 
+# Flujo híbrido: umbrales por escenario
+GROQ_SCREEN_MIN_GAP = 0.05         # 5% mínimo para pasar screening inicial
+GROQ_FALLBACK_MIN_GAP = 0.20       # 20% si solo tenemos Groq (más conservador)
+GROQ_FALLBACK_REQUIRED_CONF = "high"  # Solo high confidence en fallback
+CONSENSUS_MIN_GAP = 0.15           # 15% con ambos modelos en consenso
+
 
 _SYSTEM_PROMPT = """Eres un analista experto en mercados de predicción (prediction markets).
 Tu trabajo es estimar la probabilidad REAL de que un evento ocurra, comparándola con el precio actual del mercado para detectar ineficiencias.
@@ -783,6 +789,50 @@ def analyze_groq(question: str, description: str, market_price: float,
     return None
 
 
+def groq_quick_screen(
+    question: str,
+    description: str,
+    market_price: float,
+    news_articles: list[dict] = None
+) -> tuple[Optional[dict], float, bool]:
+    """
+    Screening rápido con Groq (1 request, siempre disponible).
+    
+    Este es el primer paso del flujo híbrido. Groq actúa como filtro
+    para decidir qué mercados merecen análisis profundo con Cerebras.
+    
+    Args:
+        question: pregunta del mercado
+        description: descripción del mercado
+        market_price: precio actual del token YES
+        news_articles: noticias relevantes
+    
+    Returns:
+        (result, gap, is_promising)
+        - result: dict con análisis completo de Groq
+        - gap: diferencia absoluta entre prob y market_price
+        - is_promising: True si gap >= 5% y conf != low
+    """
+    result = analyze_groq(question, description, market_price, news_articles)
+    
+    if not result or result.get("probability_yes") is None:
+        return None, 0.0, False
+    
+    prob = float(result["probability_yes"])
+    gap = abs(prob - market_price)
+    conf = result.get("confidence", "low")
+    
+    # Prometedor si gap >= 5% y no es low confidence
+    is_promising = gap >= GROQ_SCREEN_MIN_GAP and conf != "low"
+    
+    logger.info(
+        f"[LLM] Groq screen — gap={gap:.1%} conf={conf} "
+        f"promising={is_promising} | {question[:50]}"
+    )
+    
+    return result, gap, is_promising
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # PIPELINE PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -794,7 +844,7 @@ def full_analysis(
     force: bool = False,
 ) -> tuple[Optional[dict], Optional[dict], float, bool]:
     """
-    Pipeline de análisis de 2 modelos con calibración Fase 1.
+    Pipeline híbrido de análisis con Groq (siempre disponible) + Cerebras (premium).
     
     Args:
         market: dict con id, question, description
@@ -802,17 +852,20 @@ def full_analysis(
         news_articles: lista de noticias recientes relevantes
         force: True para ignorar cache
     
-    Flujo:
-      1. Cerebras multi-sample → screener con variance
-         - Si variance > 15% → skip (modelo muy incierto)
+    Flujo híbrido:
+      1. Groq Quick Screen (siempre, 1 request)
+         - Si gap < 5% o conf = "low" → skip, no trade
+         - Si prometedor → continuar a paso 2
       
-      2. Groq → confirmación final
-      
-      3. Consistency Check → comparar reasoning keywords
-         - Si overlap < 30% → skip (modelos no alineados)
-      
-      4. Platt Scaling → calibrar probabilidad final
-         - Si hay suficientes datos históricos
+      2. ¿Cerebras disponible?
+         - SÍ → Cerebras Deep Analysis (3 samples)
+               - Si variance > 15% → no trade
+               - Si divergencia > 20% → no trade  
+               - Si overlap < 30% → no trade
+               - Si gap >= 15% y todo OK → trade
+         
+         - NO → Fallback Groq-only
+               - Si gap >= 20% y conf = "high" → trade (umbral más conservador)
     
     Returns:
         (cerebras_result, groq_result, gap_final, should_trade)
@@ -828,154 +881,189 @@ def full_analysis(
     groq_result     = None
     cerebras_variance = 0.0
     reasoning_overlap = None
+    using_fallback = False
 
-    # ─── CEREBRAS: screener con multi-sample ────────────────────────────────
-    cerebras_model = f"cerebras/{CEREBRAS_MODEL}"
-    
-    if not force:
-        cerebras_result = _get_cached_analysis(market_id, cerebras_model, max_age_hours=8)
-        if cerebras_result:
-            # Recuperar variance del cache si existe
-            cerebras_variance = cerebras_result.get("sample_variance") or 0.0
-    
-    if cerebras_result is None:
-        # Hacer análisis multi-sample para medir variance
-        cerebras_result, cerebras_variance, all_probs = analyze_cerebras_multisample(
-            question, description, market_price, news_articles
-        )
-        
-        if cerebras_result and cerebras_result.get("probability_yes") is not None:
-            cerebras_prob = float(cerebras_result["probability_yes"])
-            cerebras_gap = abs(cerebras_prob - market_price)
-            cerebras_keywords = list(extract_reasoning_keywords(cerebras_result.get("reasoning", "")))
-            
-            _save_analysis(
-                market_id, cerebras_model, cerebras_result, 
-                market_price, cerebras_gap,
-                sample_variance=cerebras_variance,
-                sample_count=len(all_probs),
-                reasoning_keywords=cerebras_keywords
-            )
-            
-            # Guardar para calibración futura
-            _save_calibration_point(market_id, cerebras_model, cerebras_prob)
-    
-    if not cerebras_result or cerebras_result.get("probability_yes") is None:
-        logger.warning(f"[LLM] Cerebras falló para {market_id[:16]}… — saltando mercado")
-        return None, None, 0.0, False
-
-    cerebras_prob = float(cerebras_result["probability_yes"])
-    cerebras_gap  = abs(cerebras_prob - market_price)
-    cerebras_conf = cerebras_result.get("confidence", "low")
-
-    # ─── CHECK: Variance alta → skip temprano ────────────────────────────────
-    if cerebras_variance > VARIANCE_THRESHOLD:
-        logger.info(
-            f"[LLM] Variance alta ({cerebras_variance:.3f} > {VARIANCE_THRESHOLD}) "
-            f"— modelo muy incierto | {question[:50]}"
-        )
-        return cerebras_result, None, cerebras_gap, False
-
-    # Si gap < 10% o confianza baja → no merece confirmación
-    if cerebras_gap < 0.10 or cerebras_conf == "low":
-        logger.info(
-            f"[LLM] Gap pequeño ({cerebras_gap:.1%}) o conf low — sin Groq | {question[:50]}"
-        )
-        return cerebras_result, None, cerebras_gap, False
-
-    # ─── GROQ: confirmación final ────────────────────────────────────────────
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PASO 1: GROQ QUICK SCREEN (siempre disponible)
+    # ═══════════════════════════════════════════════════════════════════════════
     groq_model = f"groq/{GROQ_MODEL}"
     
+    # Intentar cache primero
     if not force:
         groq_result = _get_cached_analysis(market_id, groq_model, max_age_hours=8)
     
     if groq_result is None:
-        groq_result = analyze_groq(question, description, market_price, news_articles)
+        groq_result, groq_gap, is_promising = groq_quick_screen(
+            question, description, market_price, news_articles
+        )
         
         if groq_result and groq_result.get("probability_yes") is not None:
             groq_prob = float(groq_result["probability_yes"])
             groq_gap = abs(groq_prob - market_price)
             groq_keywords = list(extract_reasoning_keywords(groq_result.get("reasoning", "")))
             
-            # Calcular overlap con Cerebras
-            reasoning_overlap = calculate_reasoning_overlap(
-                cerebras_result.get("reasoning", ""),
-                groq_result.get("reasoning", "")
-            )
-            
             _save_analysis(
-                market_id, groq_model, groq_result, 
+                market_id, groq_model, groq_result,
                 market_price, groq_gap,
-                reasoning_keywords=groq_keywords,
-                reasoning_overlap=reasoning_overlap
+                reasoning_keywords=groq_keywords
+            )
+            _save_calibration_point(market_id, groq_model, groq_prob)
+    else:
+        # Recalcular desde cache
+        groq_prob = float(groq_result["probability_yes"])
+        groq_gap = abs(groq_prob - market_price)
+        groq_conf = groq_result.get("confidence", "low")
+        is_promising = groq_gap >= GROQ_SCREEN_MIN_GAP and groq_conf != "low"
+    
+    # Si Groq falló completamente, no podemos hacer nada
+    if not groq_result or groq_result.get("probability_yes") is None:
+        logger.warning(f"[LLM] Groq screen falló para {market_id[:16]}… — saltando mercado")
+        return None, None, 0.0, False
+    
+    groq_prob = float(groq_result["probability_yes"])
+    groq_gap = abs(groq_prob - market_price)
+    groq_conf = groq_result.get("confidence", "low")
+    
+    # Si no es prometedor, skip temprano (ahorra Cerebras)
+    if not is_promising if 'is_promising' in dir() else (groq_gap < GROQ_SCREEN_MIN_GAP or groq_conf == "low"):
+        logger.info(
+            f"[LLM] Groq screen: gap={groq_gap:.1%} conf={groq_conf} — no prometedor, skip | {question[:50]}"
+        )
+        return None, groq_result, groq_gap, False
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PASO 2: CEREBRAS DEEP ANALYSIS (si disponible)
+    # ═══════════════════════════════════════════════════════════════════════════
+    cerebras_model = f"cerebras/{CEREBRAS_MODEL}"
+    cerebras_available = key_manager.get_next_key("cerebras") is not None
+    
+    if cerebras_available:
+        # Intentar cache primero
+        if not force:
+            cerebras_result = _get_cached_analysis(market_id, cerebras_model, max_age_hours=8)
+            if cerebras_result:
+                cerebras_variance = cerebras_result.get("sample_variance") or 0.0
+        
+        if cerebras_result is None:
+            # Análisis multi-sample para medir variance
+            cerebras_result, cerebras_variance, all_probs = analyze_cerebras_multisample(
+                question, description, market_price, news_articles
             )
             
-            # Guardar para calibración futura
-            _save_calibration_point(market_id, groq_model, groq_prob)
-
-    # ─── DECISIÓN FINAL ────────────────────────────────────────────────────────
-    if not groq_result or groq_result.get("probability_yes") is None:
-        logger.info(f"[LLM] Groq no disponible — no operar | {question[:50]}")
-        return cerebras_result, None, cerebras_gap, False
-
-    groq_prob = float(groq_result["probability_yes"])
-    groq_conf = groq_result.get("confidence", "low")
-
-    # Check divergencia numérica
-    divergence_cg = abs(cerebras_prob - groq_prob)
-    if divergence_cg > 0.20:
-        logger.warning(
-            f"[LLM] Divergencia Cerebras-Groq {divergence_cg:.1%} — no operar | {question[:50]}"
-        )
-        return cerebras_result, groq_result, 0.0, False
-
-    # ─── CHECK: Reasoning overlap bajo → skip ────────────────────────────────
-    if reasoning_overlap is None:
-        reasoning_overlap = calculate_reasoning_overlap(
-            cerebras_result.get("reasoning", ""),
-            groq_result.get("reasoning", "")
-        )
+            if cerebras_result and cerebras_result.get("probability_yes") is not None:
+                cerebras_prob = float(cerebras_result["probability_yes"])
+                cerebras_gap = abs(cerebras_prob - market_price)
+                cerebras_keywords = list(extract_reasoning_keywords(cerebras_result.get("reasoning", "")))
+                
+                # Calcular overlap con Groq
+                reasoning_overlap = calculate_reasoning_overlap(
+                    groq_result.get("reasoning", ""),
+                    cerebras_result.get("reasoning", "")
+                )
+                
+                _save_analysis(
+                    market_id, cerebras_model, cerebras_result,
+                    market_price, cerebras_gap,
+                    sample_variance=cerebras_variance,
+                    sample_count=len(all_probs),
+                    reasoning_keywords=cerebras_keywords,
+                    reasoning_overlap=reasoning_overlap
+                )
+                _save_calibration_point(market_id, cerebras_model, cerebras_prob)
+        
+        # Si Cerebras respondió, usar flujo dual
+        if cerebras_result and cerebras_result.get("probability_yes") is not None:
+            cerebras_prob = float(cerebras_result["probability_yes"])
+            cerebras_gap = abs(cerebras_prob - market_price)
+            cerebras_conf = cerebras_result.get("confidence", "low")
+            
+            # ─── CHECK: Variance alta → skip ─────────────────────────────────
+            if cerebras_variance > VARIANCE_THRESHOLD:
+                logger.info(
+                    f"[LLM] Variance alta ({cerebras_variance:.3f} > {VARIANCE_THRESHOLD}) "
+                    f"— modelo muy incierto | {question[:50]}"
+                )
+                return cerebras_result, groq_result, cerebras_gap, False
+            
+            # ─── CHECK: Divergencia numérica → skip ──────────────────────────
+            divergence = abs(cerebras_prob - groq_prob)
+            if divergence > 0.20:
+                logger.warning(
+                    f"[LLM] Divergencia Cerebras-Groq {divergence:.1%} — no operar | {question[:50]}"
+                )
+                return cerebras_result, groq_result, 0.0, False
+            
+            # ─── CHECK: Reasoning overlap bajo → skip ────────────────────────
+            if reasoning_overlap is None:
+                reasoning_overlap = calculate_reasoning_overlap(
+                    groq_result.get("reasoning", ""),
+                    cerebras_result.get("reasoning", "")
+                )
+            
+            if reasoning_overlap < REASONING_OVERLAP_THRESHOLD:
+                logger.info(
+                    f"[LLM] Reasoning overlap bajo ({reasoning_overlap:.1%} < {REASONING_OVERLAP_THRESHOLD:.0%}) "
+                    f"— modelos no alineados | {question[:50]}"
+                )
+                return cerebras_result, groq_result, 0.0, False
+            
+            # ─── PLATT SCALING: calibrar probabilidad ────────────────────────
+            probs = [cerebras_prob, groq_prob]
+            confs = [cerebras_conf, groq_conf]
+            avg_prob = sum(probs) / len(probs)
+            
+            scaler = _load_platt_scaler(cerebras_model)
+            if scaler.is_fitted:
+                calibrated_prob = scaler.calibrate(avg_prob)
+                logger.info(
+                    f"[LLM] Platt calibration: {avg_prob:.2f} → {calibrated_prob:.2f} "
+                    f"(n={scaler.n_samples})"
+                )
+                avg_prob = calibrated_prob
+            
+            gap_final = abs(avg_prob - market_price)
+            has_low_conf = any(c == "low" for c in confs)
+            
+            should_trade = (
+                gap_final >= CONSENSUS_MIN_GAP
+                and not has_low_conf
+                and cerebras_variance <= VARIANCE_THRESHOLD
+                and reasoning_overlap >= REASONING_OVERLAP_THRESHOLD
+            )
+            
+            logger.info(
+                f"[LLM] Análisis DUAL — gap={gap_final:.1%} var={cerebras_variance:.3f} "
+                f"overlap={reasoning_overlap:.1%} should_trade={should_trade} | {question[:50]}"
+            )
+            
+            return cerebras_result, groq_result, gap_final, should_trade
+        
+        else:
+            # Cerebras estaba disponible pero falló en este mercado específico
+            logger.warning(f"[LLM] Cerebras falló para {market_id[:16]}… — usando fallback Groq")
+            using_fallback = True
     
-    if reasoning_overlap < REASONING_OVERLAP_THRESHOLD:
+    else:
+        # Cerebras no disponible (todas las keys en cooldown)
+        logger.info(f"[LLM] Cerebras no disponible — usando fallback Groq | {question[:50]}")
+        using_fallback = True
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # PASO 3: FALLBACK GROQ-ONLY (umbral más conservador)
+    # ═══════════════════════════════════════════════════════════════════════════
+    if using_fallback:
+        # Con solo Groq, exigimos gap >= 20% y confidence = high
+        should_trade = (
+            groq_gap >= GROQ_FALLBACK_MIN_GAP
+            and groq_conf == GROQ_FALLBACK_REQUIRED_CONF
+        )
+        
         logger.info(
-            f"[LLM] Reasoning overlap bajo ({reasoning_overlap:.1%} < {REASONING_OVERLAP_THRESHOLD:.0%}) "
-            f"— modelos no alineados | {question[:50]}"
+            f"[LLM] Fallback GROQ-ONLY — gap={groq_gap:.1%} conf={groq_conf} "
+            f"should_trade={should_trade} (requiere gap>={GROQ_FALLBACK_MIN_GAP:.0%}, conf={GROQ_FALLBACK_REQUIRED_CONF}) | {question[:50]}"
         )
-        return cerebras_result, groq_result, 0.0, False
-
-    # ─── PLATT SCALING: calibrar probabilidad ────────────────────────────────
-    probs = [cerebras_prob, groq_prob]
-    confs = [cerebras_conf, groq_conf]
+        
+        return None, groq_result, groq_gap, should_trade
     
-    # Promedio de las probabilidades
-    avg_prob = sum(probs) / len(probs)
-    
-    # Intentar calibrar con Platt Scaling
-    scaler = _load_platt_scaler(cerebras_model)
-    if scaler.is_fitted:
-        calibrated_prob = scaler.calibrate(avg_prob)
-        logger.info(
-            f"[LLM] Platt calibration: {avg_prob:.2f} → {calibrated_prob:.2f} "
-            f"(n={scaler.n_samples})"
-        )
-        avg_prob = calibrated_prob
-    
-    gap_final = abs(avg_prob - market_price)
-    
-    # Verificar que ningún modelo tenga confianza baja
-    has_low_conf = any(c == "low" for c in confs)
-    
-    should_trade = (
-        len(probs) >= 2
-        and gap_final >= 0.15
-        and not has_low_conf
-        and cerebras_variance <= VARIANCE_THRESHOLD
-        and reasoning_overlap >= REASONING_OVERLAP_THRESHOLD
-    )
-
-    logger.info(
-        f"[LLM] Análisis completo — gap={gap_final:.1%} var={cerebras_variance:.3f} "
-        f"overlap={reasoning_overlap:.1%} should_trade={should_trade} | {question[:50]}"
-    )
-
-    return cerebras_result, groq_result, gap_final, should_trade
+    # Fallback final (no debería llegar aquí)
+    return cerebras_result, groq_result, 0.0, False

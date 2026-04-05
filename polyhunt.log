@@ -1,9 +1,453 @@
-2026-04-05 15:28:32 [INFO] server — [API] Logs borrados desde el dashboard
-2026-04-05 15:44:53 [ERROR] server — Error en GET /api/settings/keys: Server disconnected
-2026-04-05 15:44:53 [ERROR] core.paper_trader — [2026-04-05 15:44:53.320229] Error obteniendo datos dashboard: Server disconnected
-2026-04-05 15:45:53 [INFO] core.db — Conexión a Supabase establecida
-2026-04-05 15:45:53 [INFO] core.db — Conexión a Supabase establecida
-2026-04-05 15:45:53 [INFO] core.db — Conexión a Supabase establecida
-2026-04-05 15:49:53 [ERROR] core.paper_trader — [2026-04-05 15:49:53.485642] Error obteniendo datos dashboard: Server disconnected
-2026-04-05 15:49:53 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
-2026-04-05 15:50:04 [INFO] __main__ — [PolyHunt] Bot detenido correctamente.
+2026-04-05 18:00:09 [INFO] server — [API] Logs borrados desde el dashboard
+2026-04-05 18:00:27 [INFO] server — [API] Bot activado desde el dashboard
+2026-04-05 18:00:27 [INFO] core.market_scanner — [2026-04-05 18:00:27.538435] Escaneando tag_id=2 — offset=0
+2026-04-05 18:00:29 [INFO] core.market_scanner — [2026-04-05 18:00:29.167677] Escaneando tag_id=2 — offset=100
+2026-04-05 18:00:30 [INFO] core.market_scanner — [2026-04-05 18:00:30.619662] Escaneando tag_id=2 — offset=200
+2026-04-05 18:00:32 [INFO] core.market_scanner — [2026-04-05 18:00:32.155151] Escaneando tag_id=2 — offset=300
+2026-04-05 18:00:33 [INFO] core.market_scanner — [2026-04-05 18:00:33.577017] Escaneando tag_id=2 — offset=400
+2026-04-05 18:00:35 [INFO] core.market_scanner — [2026-04-05 18:00:35.451345] Escaneando tag_id=100265 — offset=0
+2026-04-05 18:00:36 [INFO] core.market_scanner — [2026-04-05 18:00:36.798292] Escaneando tag_id=100265 — offset=100
+2026-04-05 18:00:38 [INFO] core.market_scanner — [2026-04-05 18:00:38.041412] Escaneando tag_id=100265 — offset=200
+2026-04-05 18:00:39 [INFO] core.market_scanner — [2026-04-05 18:00:39.334405] Escaneando tag_id=100265 — offset=300
+2026-04-05 18:00:40 [INFO] core.market_scanner — [2026-04-05 18:00:40.593540] Escaneando tag_id=100265 — offset=400
+2026-04-05 18:00:41 [INFO] core.market_scanner — [2026-04-05 18:00:41.168325] Escaneando tag_id=126 — offset=0
+2026-04-05 18:00:42 [INFO] core.market_scanner — [2026-04-05 18:00:42.836988] Escaneando tag_id=126 — offset=100
+2026-04-05 18:00:44 [INFO] core.market_scanner — [2026-04-05 18:00:44.174444] Escaneando tag_id=126 — offset=200
+2026-04-05 18:00:44 [INFO] core.market_scanner — [2026-04-05 18:00:44.894976] Escaneando tag_id=96 — offset=0
+2026-04-05 18:00:46 [INFO] core.market_scanner — [2026-04-05 18:00:46.175855] Escaneando tag_id=96 — offset=100
+2026-04-05 18:00:46 [INFO] core.market_scanner — [2026-04-05 18:00:46.759896] Escaneando tag_id=95 — offset=0
+2026-04-05 18:00:47 [INFO] core.market_scanner — [2026-04-05 18:00:47.426307] 431 mercados políticos encontrados ($50K–$250K)
+2026-04-05 18:00:58 [INFO] core.news_monitor — [2026-04-05 18:00:58.362323] 83 artículos obtenidos de 12 feeds
+2026-04-05 18:01:02 [INFO] core.news_monitor — [2026-04-05 18:01:02.317099] 4/83 artículos guardados en Supabase
+2026-04-05 18:01:24 [INFO] core.gdelt_news — [GDELT] Timeout, backoff 2.4s
+2026-04-05 18:01:38 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:01:46 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:02:00 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:02:08 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:02:20 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:02:20 [INFO] core.gdelt_news — [GDELT] Total 0 artículos únicos para 150 mercados
+2026-04-05 18:02:28 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.4s (intento 1/4)
+2026-04-05 18:02:35 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:02:35 [INFO] core.gdelt_news — [GDELT] Ciclo completado: fetched=0 saved=0 markets=0
+2026-04-05 18:02:40 [INFO] sentence_transformers.SentenceTransformer — Use pytorch device_name: cpu
+2026-04-05 18:02:40 [INFO] sentence_transformers.SentenceTransformer — Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-04-05 18:02:42 [INFO] core.market_correlator — [Correlator] Modelo de embeddings cargado exitosamente
+2026-04-05 18:02:43 [INFO] core.market_correlator — [Correlator] Actualizados 10/10 embeddings
+2026-04-05 18:02:55 [INFO] __main__ — [SCAN] Quant skip | market=0xca2059450e49cc... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:03 [INFO] __main__ — [SCAN] Quant skip | market=0x1b89a207ec7cd0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:10 [INFO] __main__ — [SCAN] Quant skip | market=0xc6564d7fc7bb20... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:18 [INFO] __main__ — [SCAN] Quant skip | market=0x370c146544d0fb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:22 [WARNING] core.market_scanner — [2026-04-05 18:03:22.283658] Error HTTP obteniendo precio mid 1106157923224942...: 404
+2026-04-05 18:03:25 [INFO] __main__ — [SCAN] Quant skip | market=0xa6093b047455f1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:32 [INFO] __main__ — [SCAN] Quant skip | market=0xcd01256212f107... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:35 [INFO] __main__ — [SCAN] Quant skip | market=0xa04f9a5818493b... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:42 [INFO] __main__ — [SCAN] Quant skip | market=0x433587daba653f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:45 [INFO] __main__ — [SCAN] Quant skip | market=0x4266ab92114897... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:03:52 [INFO] __main__ — [QUEUE] Enqueued | market=0x96fd9357d0245c... | reason=news | force=True | price=0.0155
+2026-04-05 18:03:52 [WARNING] core.db — [db_retry] upsert_market(0xcaa2b510d78465) intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:03:53 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:03:55 [INFO] core.llm_analyzer — [LLM] Cerebras multi-sample (3 muestras) — mean=0.14 std=0.028 | Will Donald Trump be the next leader out
+2026-04-05 18:03:57 [INFO] core.llm_analyzer — [LLM] Groq OK — prob=0.05 conf=medium | Will Donald Trump be the next leader out before 20
+2026-04-05 18:03:57 [INFO] core.llm_analyzer — [LLM] Análisis completo — gap=8.0% var=0.028 overlap=33.3% should_trade=False | Will Donald Trump be the next leader out before 20
+2026-04-05 18:03:57 [INFO] __main__ — [LLM] No trade | market=0x96fd9357d0245c... | c=0.13999999999999999 | g=0.05 | gap=0.080
+2026-04-05 18:04:05 [WARNING] core.db — [db_retry]  intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:04:05 [ERROR] core.paper_trader — [2026-04-05 18:04:05.631005] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:04:08 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:04:13 [INFO] __main__ — [SCAN] Quant skip | market=0x9be876deca1f73... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:04:20 [INFO] __main__ — [QUEUE] Enqueued | market=0x628e335a6cbec4... | reason=price_move | force=True | price=0.2050
+2026-04-05 18:04:23 [INFO] core.llm_analyzer — [LLM] Cerebras multi-sample (3 muestras) — mean=0.35 std=0.000 | US x Iran meeting by April 30, 2026?
+2026-04-05 18:04:24 [INFO] core.llm_analyzer — [LLM] Groq OK — prob=0.15 conf=medium | US x Iran meeting by April 30, 2026?
+2026-04-05 18:04:24 [INFO] core.llm_analyzer — [LLM] Reasoning overlap bajo (0.0% < 30%) — modelos no alineados | US x Iran meeting by April 30, 2026?
+2026-04-05 18:04:24 [INFO] __main__ — [LLM] No trade | market=0x628e335a6cbec4... | c=0.3499999999999999 | g=0.15 | gap=0.000
+2026-04-05 18:04:43 [INFO] __main__ — [SCAN] Quant skip | market=0x247eabb5ea2c71... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:04:50 [INFO] __main__ — [QUEUE] Enqueued | market=0x789c947a941560... | reason=price_move | force=True | price=0.0750
+2026-04-05 18:04:51 [WARNING] core.key_manager — [KeyManager] Key 3 en cooldown por 30 min. Error: Error code: 429 - {'message': "We're experiencing high traffic right now! Please try again soon.", '
+2026-04-05 18:04:51 [WARNING] core.llm_analyzer — [LLM] Cerebras 429 sample 1 — rotando key
+2026-04-05 18:04:52 [WARNING] core.key_manager — [KeyManager] Key 4 en cooldown por 30 min. Error: Error code: 429 - {'message': "We're experiencing high traffic right now! Please try again soon.", '
+2026-04-05 18:04:52 [WARNING] core.llm_analyzer — [LLM] Cerebras 429 sample 1 — rotando key
+2026-04-05 18:04:54 [INFO] __main__ — [QUEUE] Enqueued | market=0x05bd10e73dc1ce... | reason=new_market | force=True | price=0.0220
+2026-04-05 18:04:54 [WARNING] core.key_manager — [KeyManager] Key 2 en cooldown por 30 min. Error: Error code: 429 - {'message': "We're experiencing high traffic right now! Please try again soon.", '
+2026-04-05 18:04:54 [WARNING] core.llm_analyzer — [LLM] Cerebras 429 sample 2 — rotando key
+2026-04-05 18:04:55 [WARNING] core.key_manager — [KeyManager] Key 1 en cooldown por 30 min. Error: Error code: 429 - {'message': "We're experiencing high traffic right now! Please try again soon.", '
+2026-04-05 18:04:55 [WARNING] core.llm_analyzer — [LLM] Cerebras 429 sample 2 — rotando key
+2026-04-05 18:04:55 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:04:55 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:04:55 [INFO] core.llm_analyzer — [LLM] Gap pequeño (4.5%) o conf low — sin Groq | Will the Iranian regime fall by May 31?
+2026-04-05 18:04:55 [INFO] __main__ — [LLM] No trade | market=0x789c947a941560... | c=0.03 | g=- | gap=0.045
+2026-04-05 18:04:56 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:04:56 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:04:56 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:04:56 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:04:56 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x05bd10e73dc1ce… — saltando mercado
+2026-04-05 18:04:56 [INFO] __main__ — [LLM] No trade | market=0x05bd10e73dc1ce... | c=- | g=- | gap=0.000
+2026-04-05 18:05:01 [INFO] __main__ — [SCAN] Quant skip | market=0x6b4b89bb3bfead... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:05:13 [INFO] __main__ — [SCAN] Quant skip | market=0xc11e997578fa83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:05:13 [WARNING] core.market_scanner — [2026-04-05 18:05:13.839623] Error HTTP obteniendo precio mid 5938087988569072...: 404
+2026-04-05 18:05:15 [INFO] __main__ — [SCAN] Quant skip | market=0x64e51f9b2c7f43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:05:23 [INFO] __main__ — [SCAN] Quant skip | market=0x2636a06ef9192d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:05:33 [INFO] __main__ — [SCAN] Quant skip | market=0xe7ef027386c6ba... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:05:44 [INFO] __main__ — [SCAN] Quant skip | market=0xb3fbac28ca4204... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:05:59 [INFO] __main__ — [SCAN] Quant skip | market=0x857a2ae8088bc2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:01 [INFO] __main__ — [SCAN] Quant skip | market=0x9bc5b4e8a866be... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:09 [INFO] __main__ — [QUEUE] Enqueued | market=0x325d0ee1889510... | reason=news | force=True | price=0.0260
+2026-04-05 18:06:09 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:06:09 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:06:09 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:06:09 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:06:09 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x325d0ee1889510… — saltando mercado
+2026-04-05 18:06:10 [INFO] __main__ — [LLM] No trade | market=0x325d0ee1889510... | c=- | g=- | gap=0.000
+2026-04-05 18:06:17 [INFO] __main__ — [SCAN] Quant skip | market=0x731178908877c9... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:24 [INFO] __main__ — [SCAN] Quant skip | market=0x74e5ba38a2cb83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:27 [INFO] __main__ — [SCAN] Quant skip | market=0xf773a12cc13214... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:30 [INFO] __main__ — [SCAN] Quant skip | market=0x44efa7a078d27c... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:33 [INFO] __main__ — [SCAN] Quant skip | market=0x394b2be8876347... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:37 [INFO] __main__ — [SCAN] Quant skip | market=0x1991f63d7497ae... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:06:40 [INFO] __main__ — [SCAN] Quant skip | market=0x5ae264c7a5977d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:07:04 [INFO] __main__ — [SCAN] Quant skip | market=0x21cadb8a9cfd75... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:07:14 [INFO] __main__ — [SCAN] Quant skip | market=0x5ff8465273252f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:07:43 [WARNING] core.market_scanner — [2026-04-05 18:07:43.113438] Error HTTP obteniendo precio mid 8920003427071268...: 404
+2026-04-05 18:07:53 [ERROR] core.paper_trader — [2026-04-05 18:07:53.489378] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:07:53 [WARNING] core.db — [db_retry]  intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:07:57 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:08:04 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
+2026-04-05 18:08:04 [WARNING] core.db — [db_retry]  intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:08:08 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:08:16 [INFO] __main__ — [SCAN] Quant skip | market=0xcead388a140c43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:19 [INFO] __main__ — [SCAN] Quant skip | market=0x674c0894f8992f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:22 [INFO] __main__ — [SCAN] Quant skip | market=0x8025fb16d3cd32... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:25 [INFO] __main__ — [SCAN] Quant skip | market=0x8e19827705b34f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:32 [INFO] __main__ — [SCAN] Quant skip | market=0x9248190b831a98... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:39 [INFO] __main__ — [SCAN] Quant skip | market=0x06345583ca9b85... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:47 [INFO] __main__ — [SCAN] Quant skip | market=0x7d9928e23aefb2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:50 [INFO] __main__ — [SCAN] Quant skip | market=0xfa0f936e75c4ce... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:08:53 [WARNING] core.db — [db_retry]  intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:08:53 [ERROR] core.paper_trader — [2026-04-05 18:08:53.489517] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:08:56 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:08:57 [INFO] __main__ — [SCAN] Quant skip | market=0xb9212b9cb5404a... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:09:03 [INFO] __main__ — [SCAN] Quant skip | market=0x583c901fbd72f0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:09:21 [WARNING] core.market_scanner — [2026-04-05 18:09:21.678422] Error HTTP obteniendo precio mid 7953963058173386...: 404
+2026-04-05 18:09:29 [WARNING] core.market_scanner — [2026-04-05 18:09:29.000708] Error HTTP obteniendo precio mid 8152270884045047...: 404
+2026-04-05 18:09:36 [INFO] __main__ — [SCAN] Quant skip | market=0xc6158282b57404... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:09:46 [WARNING] core.market_scanner — [2026-04-05 18:09:46.371090] Error HTTP obteniendo precio mid 1011899928742599...: 404
+2026-04-05 18:09:49 [INFO] __main__ — [SCAN] Quant skip | market=0xba67c6e6a050bf... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:09:59 [INFO] __main__ — [SCAN] Quant skip | market=0x641830333ea221... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:10:05 [ERROR] core.analytics — [Analytics] Error obteniendo calendario: Server disconnected
+2026-04-05 18:10:05 [WARNING] core.db — [db_retry]  intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:10:08 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:10:18 [INFO] __main__ — [QUEUE] Enqueued | market=0xecf63047b28b4a... | reason=price_move | force=True | price=0.0180
+2026-04-05 18:10:18 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:10:18 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:10:18 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:10:18 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:10:18 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0xecf63047b28b4a… — saltando mercado
+2026-04-05 18:10:18 [INFO] __main__ — [LLM] No trade | market=0xecf63047b28b4a... | c=- | g=- | gap=0.000
+2026-04-05 18:10:25 [INFO] __main__ — [SCAN] Quant skip | market=0x0e4ade6df320ac... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:10:32 [INFO] __main__ — [SCAN] Quant skip | market=0x6d6b9d5f817261... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:10:53 [WARNING] core.db — [db_retry]  intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:10:53 [ERROR] core.paper_trader — [2026-04-05 18:10:53.545899] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:10:56 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:10:56 [INFO] __main__ — [SCAN] Quant skip | market=0x57de5cb5861ac1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:10:56 [WARNING] core.market_scanner — [2026-04-05 18:10:56.687429] Error HTTP obteniendo precio mid 5969457629035666...: 404
+2026-04-05 18:10:59 [INFO] __main__ — [SCAN] Quant skip | market=0x57c75de5d056d8... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:11:03 [INFO] __main__ — [SCAN] Quant skip | market=0xa0a62ba83d66d7... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:11:06 [INFO] __main__ — [SCAN] Quant skip | market=0xa61700026c9208... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:11:09 [WARNING] core.market_scanner — [2026-04-05 18:11:09.698471] Error HTTP obteniendo precio mid 5569766203515577...: 404
+2026-04-05 18:11:11 [INFO] __main__ — [SCAN] Quant skip | market=0x6359471bcaffcb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:11:30 [INFO] __main__ — [SCAN] Quant skip | market=0xad80f8a007ce2d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:11:48 [INFO] core.key_manager — [KeyManager] Reset diario de contadores completado
+2026-04-05 18:11:48 [INFO] __main__ — [Scan #1] 681.4s | Mercados=150 · CambioPrecio=8 · NoticiasNuevas=4 · ColaLLM=0 · QuantSkip=49 · CerebrasOK/Err=7/4 · GroqOK/Err=2/0 · Cooldowns=cerebras:4 groq:0 · Trades=0
+2026-04-05 18:16:48 [INFO] core.market_scanner — [2026-04-05 18:16:48.923902] Escaneando tag_id=2 — offset=0
+2026-04-05 18:16:50 [INFO] core.market_scanner — [2026-04-05 18:16:50.586012] Escaneando tag_id=2 — offset=100
+2026-04-05 18:16:52 [INFO] core.market_scanner — [2026-04-05 18:16:52.025821] Escaneando tag_id=2 — offset=200
+2026-04-05 18:16:53 [INFO] core.market_scanner — [2026-04-05 18:16:53.524686] Escaneando tag_id=2 — offset=300
+2026-04-05 18:16:54 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
+2026-04-05 18:16:54 [ERROR] core.paper_trader — [2026-04-05 18:16:54.287891] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:16:54 [INFO] core.market_scanner — [2026-04-05 18:16:54.882089] Escaneando tag_id=2 — offset=400
+2026-04-05 18:16:56 [INFO] core.market_scanner — [2026-04-05 18:16:56.871489] Escaneando tag_id=100265 — offset=0
+2026-04-05 18:16:58 [INFO] core.market_scanner — [2026-04-05 18:16:58.182383] Escaneando tag_id=100265 — offset=100
+2026-04-05 18:16:59 [INFO] core.market_scanner — [2026-04-05 18:16:59.440369] Escaneando tag_id=100265 — offset=200
+2026-04-05 18:17:00 [INFO] core.market_scanner — [2026-04-05 18:17:00.748477] Escaneando tag_id=100265 — offset=300
+2026-04-05 18:17:02 [INFO] core.market_scanner — [2026-04-05 18:17:02.006448] Escaneando tag_id=100265 — offset=400
+2026-04-05 18:17:02 [INFO] core.market_scanner — [2026-04-05 18:17:02.578640] Escaneando tag_id=126 — offset=0
+2026-04-05 18:17:03 [INFO] core.market_scanner — [2026-04-05 18:17:03.940636] Escaneando tag_id=126 — offset=100
+2026-04-05 18:17:05 [INFO] core.market_scanner — [2026-04-05 18:17:05.280236] Escaneando tag_id=126 — offset=200
+2026-04-05 18:17:05 [INFO] core.market_scanner — [2026-04-05 18:17:05.932233] Escaneando tag_id=96 — offset=0
+2026-04-05 18:17:07 [INFO] core.market_scanner — [2026-04-05 18:17:07.133757] Escaneando tag_id=96 — offset=100
+2026-04-05 18:17:07 [INFO] core.market_scanner — [2026-04-05 18:17:07.704859] Escaneando tag_id=95 — offset=0
+2026-04-05 18:17:08 [INFO] core.market_scanner — [2026-04-05 18:17:08.346874] 428 mercados políticos encontrados ($50K–$250K)
+2026-04-05 18:17:12 [INFO] core.news_monitor — [2026-04-05 18:17:12.438258] 87 artículos obtenidos de 12 feeds
+2026-04-05 18:17:13 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:17:17 [INFO] core.news_monitor — [2026-04-05 18:17:17.612289] 5/87 artículos guardados en Supabase
+2026-04-05 18:17:35 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.1s (intento 1/4)
+2026-04-05 18:17:50 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:18:04 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:18:17 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:18:32 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:18:52 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:18:52 [INFO] core.gdelt_news — [GDELT] Total 0 artículos únicos para 150 mercados
+2026-04-05 18:18:53 [ERROR] core.paper_trader — [2026-04-05 18:18:53.651004] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:18:53 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
+2026-04-05 18:19:15 [WARNING] core.gdelt_news — [GDELT] Error inesperado: [WinError 10054] Se ha forzado la interrupción de una conexión existente por el host remoto
+2026-04-05 18:19:15 [INFO] core.gdelt_news — [GDELT] Ciclo completado: fetched=0 saved=0 markets=0
+2026-04-05 18:19:15 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:19:17 [INFO] core.market_correlator — [Correlator] Actualizados 10/10 embeddings
+2026-04-05 18:19:19 [INFO] __main__ — [SCAN] Quant skip | market=0xca2059450e49cc... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:22 [INFO] __main__ — [SCAN] Quant skip | market=0x1b89a207ec7cd0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:23 [INFO] __main__ — [SCAN] Quant skip | market=0xc6564d7fc7bb20... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:26 [INFO] __main__ — [SCAN] Quant skip | market=0x370c146544d0fb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:27 [WARNING] core.market_scanner — [2026-04-05 18:19:27.179297] Error HTTP obteniendo precio mid 1106157923224942...: 404
+2026-04-05 18:19:27 [INFO] __main__ — [SCAN] Quant skip | market=0xa6093b047455f1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:28 [INFO] __main__ — [SCAN] Quant skip | market=0xcd01256212f107... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:29 [INFO] __main__ — [SCAN] Quant skip | market=0xa04f9a5818493b... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:30 [INFO] __main__ — [SCAN] Quant skip | market=0x433587daba653f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:31 [INFO] __main__ — [SCAN] Quant skip | market=0x4266ab92114897... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:32 [INFO] __main__ — [QUEUE] Enqueued | market=0x96fd9357d0245c... | reason=news | force=True | price=0.0155
+2026-04-05 18:19:32 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:19:32 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:19:32 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:19:32 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:19:32 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x96fd9357d0245c… — saltando mercado
+2026-04-05 18:19:33 [INFO] __main__ — [LLM] No trade | market=0x96fd9357d0245c... | c=- | g=- | gap=0.000
+2026-04-05 18:19:35 [INFO] __main__ — [SCAN] Quant skip | market=0x9be876deca1f73... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:40 [INFO] __main__ — [SCAN] Quant skip | market=0x247eabb5ea2c71... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:43 [INFO] __main__ — [SCAN] Quant skip | market=0x6b4b89bb3bfead... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:45 [INFO] __main__ — [SCAN] Quant skip | market=0xc11e997578fa83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:45 [WARNING] core.market_scanner — [2026-04-05 18:19:45.561688] Error HTTP obteniendo precio mid 5938087988569072...: 404
+2026-04-05 18:19:45 [INFO] __main__ — [SCAN] Quant skip | market=0x64e51f9b2c7f43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:46 [INFO] __main__ — [SCAN] Quant skip | market=0x2636a06ef9192d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:48 [INFO] __main__ — [SCAN] Quant skip | market=0xe7ef027386c6ba... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:50 [INFO] __main__ — [SCAN] Quant skip | market=0xb3fbac28ca4204... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:53 [INFO] __main__ — [SCAN] Quant skip | market=0x857a2ae8088bc2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:53 [WARNING] core.db — [db_retry] upsert_market(0x9bc5b4e8a866be) intento 1/3 falló: RemoteProtocolError | Reintentando en 2.0s...
+2026-04-05 18:19:53 [ERROR] core.paper_trader — [2026-04-05 18:19:53.499630] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:19:55 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:19:56 [INFO] __main__ — [SCAN] Quant skip | market=0x9bc5b4e8a866be... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:57 [INFO] __main__ — [QUEUE] Enqueued | market=0x325d0ee1889510... | reason=news | force=True | price=0.0265
+2026-04-05 18:19:57 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:19:57 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:19:57 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:19:57 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:19:57 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x325d0ee1889510… — saltando mercado
+2026-04-05 18:19:57 [INFO] __main__ — [LLM] No trade | market=0x325d0ee1889510... | c=- | g=- | gap=0.000
+2026-04-05 18:19:58 [INFO] __main__ — [SCAN] Quant skip | market=0x731178908877c9... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:19:59 [INFO] __main__ — [SCAN] Quant skip | market=0x74e5ba38a2cb83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:00 [INFO] __main__ — [SCAN] Quant skip | market=0xf773a12cc13214... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:01 [INFO] __main__ — [SCAN] Quant skip | market=0x44efa7a078d27c... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:01 [INFO] __main__ — [SCAN] Quant skip | market=0x394b2be8876347... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:02 [INFO] __main__ — [SCAN] Quant skip | market=0x1991f63d7497ae... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:02 [INFO] __main__ — [SCAN] Quant skip | market=0x5ae264c7a5977d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:07 [INFO] __main__ — [SCAN] Quant skip | market=0x21cadb8a9cfd75... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:08 [INFO] __main__ — [SCAN] Quant skip | market=0x5ff8465273252f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:14 [WARNING] core.market_scanner — [2026-04-05 18:20:14.437516] Error HTTP obteniendo precio mid 8920003427071268...: 404
+2026-04-05 18:20:19 [INFO] __main__ — [SCAN] Quant skip | market=0xcead388a140c43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:19 [INFO] __main__ — [SCAN] Quant skip | market=0x674c0894f8992f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:20 [INFO] __main__ — [SCAN] Quant skip | market=0x8025fb16d3cd32... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:20 [INFO] __main__ — [SCAN] Quant skip | market=0x8e19827705b34f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:21 [INFO] __main__ — [SCAN] Quant skip | market=0x9248190b831a98... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:22 [INFO] __main__ — [SCAN] Quant skip | market=0x06345583ca9b85... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:24 [INFO] __main__ — [SCAN] Quant skip | market=0x7d9928e23aefb2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:25 [INFO] __main__ — [SCAN] Quant skip | market=0xfa0f936e75c4ce... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:25 [INFO] __main__ — [SCAN] Quant skip | market=0xb9212b9cb5404a... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:27 [INFO] __main__ — [SCAN] Quant skip | market=0x583c901fbd72f0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:30 [WARNING] core.market_scanner — [2026-04-05 18:20:30.555462] Error HTTP obteniendo precio mid 7953963058173386...: 404
+2026-04-05 18:20:31 [WARNING] core.market_scanner — [2026-04-05 18:20:31.821287] Error HTTP obteniendo precio mid 8152270884045047...: 404
+2026-04-05 18:20:32 [INFO] __main__ — [SCAN] Quant skip | market=0xc6158282b57404... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:35 [WARNING] core.market_scanner — [2026-04-05 18:20:35.528361] Error HTTP obteniendo precio mid 1011899928742599...: 404
+2026-04-05 18:20:35 [INFO] __main__ — [SCAN] Quant skip | market=0xba67c6e6a050bf... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:36 [INFO] __main__ — [SCAN] Quant skip | market=0x641830333ea221... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:41 [INFO] __main__ — [SCAN] Quant skip | market=0x0e4ade6df320ac... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:42 [INFO] __main__ — [SCAN] Quant skip | market=0x6d6b9d5f817261... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:45 [INFO] __main__ — [SCAN] Quant skip | market=0x57de5cb5861ac1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:46 [WARNING] core.market_scanner — [2026-04-05 18:20:46.246521] Error HTTP obteniendo precio mid 5969457629035666...: 404
+2026-04-05 18:20:46 [INFO] __main__ — [SCAN] Quant skip | market=0x57c75de5d056d8... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:47 [INFO] __main__ — [SCAN] Quant skip | market=0xa0a62ba83d66d7... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:47 [INFO] __main__ — [SCAN] Quant skip | market=0xa61700026c9208... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:48 [WARNING] core.market_scanner — [2026-04-05 18:20:48.653023] Error HTTP obteniendo precio mid 5569766203515577...: 404
+2026-04-05 18:20:48 [INFO] __main__ — [SCAN] Quant skip | market=0x6359471bcaffcb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:52 [INFO] __main__ — [SCAN] Quant skip | market=0xad80f8a007ce2d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:20:56 [INFO] __main__ — [Scan #2] 247.5s | Mercados=150 · CambioPrecio=2 · NoticiasNuevas=5 · ColaLLM=0 · QuantSkip=49 · CerebrasOK/Err=0/0 · GroqOK/Err=0/0 · Cooldowns=cerebras:4 groq:0 · Trades=0
+2026-04-05 18:22:53 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
+2026-04-05 18:22:53 [ERROR] core.paper_trader — [2026-04-05 18:22:53.722789] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:23:53 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:23:53 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:25:56 [INFO] core.market_scanner — [2026-04-05 18:25:56.511165] Escaneando tag_id=2 — offset=0
+2026-04-05 18:25:58 [INFO] core.market_scanner — [2026-04-05 18:25:58.138471] Escaneando tag_id=2 — offset=100
+2026-04-05 18:25:59 [INFO] core.market_scanner — [2026-04-05 18:25:59.629409] Escaneando tag_id=2 — offset=200
+2026-04-05 18:26:01 [INFO] core.market_scanner — [2026-04-05 18:26:01.138307] Escaneando tag_id=2 — offset=300
+2026-04-05 18:26:02 [INFO] core.market_scanner — [2026-04-05 18:26:02.617085] Escaneando tag_id=2 — offset=400
+2026-04-05 18:26:04 [INFO] core.market_scanner — [2026-04-05 18:26:04.786002] Escaneando tag_id=100265 — offset=0
+2026-04-05 18:26:06 [INFO] core.market_scanner — [2026-04-05 18:26:06.160848] Escaneando tag_id=100265 — offset=100
+2026-04-05 18:26:07 [INFO] core.market_scanner — [2026-04-05 18:26:07.523087] Escaneando tag_id=100265 — offset=200
+2026-04-05 18:26:08 [INFO] core.market_scanner — [2026-04-05 18:26:08.846559] Escaneando tag_id=100265 — offset=300
+2026-04-05 18:26:10 [INFO] core.market_scanner — [2026-04-05 18:26:10.159064] Escaneando tag_id=100265 — offset=400
+2026-04-05 18:26:10 [INFO] core.market_scanner — [2026-04-05 18:26:10.732093] Escaneando tag_id=126 — offset=0
+2026-04-05 18:26:12 [INFO] core.market_scanner — [2026-04-05 18:26:12.207021] Escaneando tag_id=126 — offset=100
+2026-04-05 18:26:13 [INFO] core.market_scanner — [2026-04-05 18:26:13.522515] Escaneando tag_id=126 — offset=200
+2026-04-05 18:26:14 [INFO] core.market_scanner — [2026-04-05 18:26:14.212724] Escaneando tag_id=96 — offset=0
+2026-04-05 18:26:15 [INFO] core.market_scanner — [2026-04-05 18:26:15.539993] Escaneando tag_id=96 — offset=100
+2026-04-05 18:26:16 [INFO] core.market_scanner — [2026-04-05 18:26:16.111132] Escaneando tag_id=95 — offset=0
+2026-04-05 18:26:16 [INFO] core.market_scanner — [2026-04-05 18:26:16.741293] 427 mercados políticos encontrados ($50K–$250K)
+2026-04-05 18:26:21 [INFO] core.news_monitor — [2026-04-05 18:26:21.033340] 84 artículos obtenidos de 12 feeds
+2026-04-05 18:26:25 [INFO] core.news_monitor — [2026-04-05 18:26:25.800109] 5/84 artículos guardados en Supabase
+2026-04-05 18:26:27 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:26:28 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 1.8s (intento 1/4)
+2026-04-05 18:26:31 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 5.8s (intento 2/4)
+2026-04-05 18:26:38 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 21.5s (intento 3/4)
+2026-04-05 18:27:01 [WARNING] core.gdelt_news — [GDELT] Rate limited después de 4 intentos
+2026-04-05 18:27:02 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.3s (intento 1/4)
+2026-04-05 18:27:06 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 5.8s (intento 2/4)
+2026-04-05 18:27:13 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 18.3s (intento 3/4)
+2026-04-05 18:27:33 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:27:34 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.1s (intento 1/4)
+2026-04-05 18:27:38 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 6.9s (intento 2/4)
+2026-04-05 18:27:45 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 18.2s (intento 3/4)
+2026-04-05 18:28:04 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:28:06 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 1.8s (intento 1/4)
+2026-04-05 18:28:09 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 5.2s (intento 2/4)
+2026-04-05 18:28:15 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 18.8s (intento 3/4)
+2026-04-05 18:28:34 [WARNING] core.gdelt_news — [GDELT] Rate limited después de 4 intentos
+2026-04-05 18:28:34 [INFO] core.gdelt_news — [GDELT] Total 0 artículos únicos para 150 mercados
+2026-04-05 18:28:36 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:28:36 [INFO] core.gdelt_news — [GDELT] Ciclo completado: fetched=0 saved=0 markets=0
+2026-04-05 18:28:37 [INFO] core.market_correlator — [Correlator] Actualizados 10/10 embeddings
+2026-04-05 18:28:40 [INFO] __main__ — [SCAN] Quant skip | market=0xca2059450e49cc... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:42 [INFO] __main__ — [SCAN] Quant skip | market=0x1b89a207ec7cd0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:44 [INFO] __main__ — [SCAN] Quant skip | market=0xc6564d7fc7bb20... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:46 [INFO] __main__ — [SCAN] Quant skip | market=0x370c146544d0fb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:47 [WARNING] core.market_scanner — [2026-04-05 18:28:47.484493] Error HTTP obteniendo precio mid 1106157923224942...: 404
+2026-04-05 18:28:47 [INFO] __main__ — [SCAN] Quant skip | market=0xa6093b047455f1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:48 [INFO] __main__ — [SCAN] Quant skip | market=0xcd01256212f107... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:49 [INFO] __main__ — [SCAN] Quant skip | market=0xa04f9a5818493b... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:50 [INFO] __main__ — [SCAN] Quant skip | market=0x433587daba653f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:51 [INFO] __main__ — [SCAN] Quant skip | market=0x4266ab92114897... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:28:52 [INFO] __main__ — [QUEUE] Enqueued | market=0x96fd9357d0245c... | reason=news | force=True | price=0.0155
+2026-04-05 18:28:53 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:28:53 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:28:53 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:28:53 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:28:53 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x96fd9357d0245c… — saltando mercado
+2026-04-05 18:28:53 [INFO] __main__ — [LLM] No trade | market=0x96fd9357d0245c... | c=- | g=- | gap=0.000
+2026-04-05 18:28:55 [INFO] __main__ — [SCAN] Quant skip | market=0x9be876deca1f73... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:00 [INFO] __main__ — [SCAN] Quant skip | market=0x247eabb5ea2c71... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:03 [INFO] __main__ — [SCAN] Quant skip | market=0x6b4b89bb3bfead... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:05 [INFO] __main__ — [SCAN] Quant skip | market=0xc11e997578fa83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:05 [WARNING] core.market_scanner — [2026-04-05 18:29:05.584492] Error HTTP obteniendo precio mid 5938087988569072...: 404
+2026-04-05 18:29:05 [INFO] __main__ — [SCAN] Quant skip | market=0x64e51f9b2c7f43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:07 [INFO] __main__ — [SCAN] Quant skip | market=0x2636a06ef9192d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:09 [INFO] __main__ — [SCAN] Quant skip | market=0xe7ef027386c6ba... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:10 [INFO] __main__ — [SCAN] Quant skip | market=0xb3fbac28ca4204... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:12 [INFO] __main__ — [QUEUE] Enqueued | market=0xc5ab3fb332af0b... | reason=price_move | force=True | price=0.0335
+2026-04-05 18:29:12 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:12 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:29:12 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:12 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:12 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0xc5ab3fb332af0b… — saltando mercado
+2026-04-05 18:29:12 [INFO] __main__ — [LLM] No trade | market=0xc5ab3fb332af0b... | c=- | g=- | gap=0.000
+2026-04-05 18:29:13 [INFO] __main__ — [SCAN] Quant skip | market=0x857a2ae8088bc2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:13 [INFO] __main__ — [SCAN] Quant skip | market=0x9bc5b4e8a866be... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:15 [INFO] __main__ — [QUEUE] Enqueued | market=0x325d0ee1889510... | reason=news | force=True | price=0.0280
+2026-04-05 18:29:15 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:15 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:29:15 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:15 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:15 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x325d0ee1889510… — saltando mercado
+2026-04-05 18:29:15 [INFO] __main__ — [LLM] No trade | market=0x325d0ee1889510... | c=- | g=- | gap=0.000
+2026-04-05 18:29:16 [INFO] __main__ — [SCAN] Quant skip | market=0x731178908877c9... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:17 [INFO] __main__ — [SCAN] Quant skip | market=0x74e5ba38a2cb83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:18 [INFO] __main__ — [SCAN] Quant skip | market=0xf773a12cc13214... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:18 [INFO] __main__ — [SCAN] Quant skip | market=0x44efa7a078d27c... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:19 [INFO] __main__ — [SCAN] Quant skip | market=0x394b2be8876347... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:19 [INFO] __main__ — [SCAN] Quant skip | market=0x1991f63d7497ae... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:20 [INFO] __main__ — [SCAN] Quant skip | market=0x5ae264c7a5977d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:21 [INFO] __main__ — [QUEUE] Enqueued | market=0xe29c8bf245ab35... | reason=price_move | force=True | price=0.2000
+2026-04-05 18:29:22 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:22 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:29:22 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:22 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:22 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0xe29c8bf245ab35… — saltando mercado
+2026-04-05 18:29:22 [INFO] __main__ — [LLM] No trade | market=0xe29c8bf245ab35... | c=- | g=- | gap=0.000
+2026-04-05 18:29:24 [INFO] __main__ — [SCAN] Quant skip | market=0x21cadb8a9cfd75... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:26 [INFO] __main__ — [SCAN] Quant skip | market=0x5ff8465273252f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:31 [WARNING] core.market_scanner — [2026-04-05 18:29:31.331493] Error HTTP obteniendo precio mid 8920003427071268...: 404
+2026-04-05 18:29:36 [INFO] __main__ — [SCAN] Quant skip | market=0xcead388a140c43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:36 [INFO] __main__ — [SCAN] Quant skip | market=0x674c0894f8992f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:37 [INFO] __main__ — [SCAN] Quant skip | market=0x8025fb16d3cd32... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:37 [INFO] __main__ — [SCAN] Quant skip | market=0x8e19827705b34f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:38 [INFO] __main__ — [SCAN] Quant skip | market=0x9248190b831a98... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:40 [INFO] __main__ — [SCAN] Quant skip | market=0x06345583ca9b85... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:42 [INFO] __main__ — [SCAN] Quant skip | market=0x7d9928e23aefb2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:42 [INFO] __main__ — [SCAN] Quant skip | market=0xfa0f936e75c4ce... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:43 [INFO] __main__ — [SCAN] Quant skip | market=0xb9212b9cb5404a... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:44 [INFO] __main__ — [SCAN] Quant skip | market=0x583c901fbd72f0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:46 [INFO] __main__ — [QUEUE] Enqueued | market=0x075dc01bc42ffe... | reason=price_move | force=True | price=0.0070
+2026-04-05 18:29:46 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:46 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:29:46 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:46 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:29:46 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x075dc01bc42ffe… — saltando mercado
+2026-04-05 18:29:46 [INFO] __main__ — [LLM] No trade | market=0x075dc01bc42ffe... | c=- | g=- | gap=0.000
+2026-04-05 18:29:47 [WARNING] core.market_scanner — [2026-04-05 18:29:47.690323] Error HTTP obteniendo precio mid 7953963058173386...: 404
+2026-04-05 18:29:48 [WARNING] core.market_scanner — [2026-04-05 18:29:48.934927] Error HTTP obteniendo precio mid 8152270884045047...: 404
+2026-04-05 18:29:49 [INFO] __main__ — [SCAN] Quant skip | market=0xc6158282b57404... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:52 [WARNING] core.market_scanner — [2026-04-05 18:29:52.570659] Error HTTP obteniendo precio mid 1011899928742599...: 404
+2026-04-05 18:29:52 [INFO] __main__ — [SCAN] Quant skip | market=0xba67c6e6a050bf... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:53 [INFO] __main__ — [SCAN] Quant skip | market=0x641830333ea221... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:58 [INFO] __main__ — [SCAN] Quant skip | market=0x0e4ade6df320ac... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:29:59 [INFO] __main__ — [SCAN] Quant skip | market=0x6d6b9d5f817261... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:02 [INFO] __main__ — [SCAN] Quant skip | market=0x57de5cb5861ac1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:02 [WARNING] core.market_scanner — [2026-04-05 18:30:02.881658] Error HTTP obteniendo precio mid 5969457629035666...: 404
+2026-04-05 18:30:03 [INFO] __main__ — [SCAN] Quant skip | market=0x57c75de5d056d8... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:03 [INFO] __main__ — [SCAN] Quant skip | market=0xa0a62ba83d66d7... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:04 [INFO] __main__ — [SCAN] Quant skip | market=0xa61700026c9208... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:05 [WARNING] core.market_scanner — [2026-04-05 18:30:05.275333] Error HTTP obteniendo precio mid 5569766203515577...: 404
+2026-04-05 18:30:05 [INFO] __main__ — [SCAN] Quant skip | market=0x6359471bcaffcb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:10 [INFO] __main__ — [SCAN] Quant skip | market=0xad80f8a007ce2d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 18:30:20 [INFO] __main__ — [QUEUE] Enqueued | market=0x339d8be5cb5765... | reason=new_market | force=True | price=0.8710
+2026-04-05 18:30:20 [INFO] __main__ — [Scan #3] 264.3s | Mercados=150 · CambioPrecio=7 · NoticiasNuevas=5 · ColaLLM=0 · QuantSkip=49 · CerebrasOK/Err=0/0 · GroqOK/Err=0/0 · Cooldowns=cerebras:4 groq:0 · Trades=0
+2026-04-05 18:30:20 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:30:20 [WARNING] core.llm_analyzer — [LLM] No hay keys disponibles para Cerebras
+2026-04-05 18:30:20 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:30:20 [WARNING] core.key_manager — [KeyManager] Todas las keys de cerebras están en cooldown
+2026-04-05 18:30:20 [WARNING] core.llm_analyzer — [LLM] Cerebras falló para 0x339d8be5cb5765… — saltando mercado
+2026-04-05 18:30:20 [INFO] __main__ — [LLM] No trade | market=0x339d8be5cb5765... | c=- | g=- | gap=0.000
+2026-04-05 18:34:04 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
+2026-04-05 18:34:04 [ERROR] core.paper_trader — [2026-04-05 18:34:04.782173] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:34:05 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:35:20 [INFO] core.market_scanner — [2026-04-05 18:35:20.746468] Escaneando tag_id=2 — offset=0
+2026-04-05 18:35:22 [INFO] core.market_scanner — [2026-04-05 18:35:22.343694] Escaneando tag_id=2 — offset=100
+2026-04-05 18:35:23 [INFO] core.market_scanner — [2026-04-05 18:35:23.809537] Escaneando tag_id=2 — offset=200
+2026-04-05 18:35:25 [INFO] core.market_scanner — [2026-04-05 18:35:25.310026] Escaneando tag_id=2 — offset=300
+2026-04-05 18:35:26 [INFO] core.market_scanner — [2026-04-05 18:35:26.739373] Escaneando tag_id=2 — offset=400
+2026-04-05 18:35:28 [INFO] core.market_scanner — [2026-04-05 18:35:28.661958] Escaneando tag_id=100265 — offset=0
+2026-04-05 18:35:30 [INFO] core.market_scanner — [2026-04-05 18:35:30.080875] Escaneando tag_id=100265 — offset=100
+2026-04-05 18:35:31 [INFO] core.market_scanner — [2026-04-05 18:35:31.367183] Escaneando tag_id=100265 — offset=200
+2026-04-05 18:35:32 [INFO] core.market_scanner — [2026-04-05 18:35:32.676295] Escaneando tag_id=100265 — offset=300
+2026-04-05 18:35:33 [INFO] core.market_scanner — [2026-04-05 18:35:33.997563] Escaneando tag_id=100265 — offset=400
+2026-04-05 18:35:34 [INFO] core.market_scanner — [2026-04-05 18:35:34.576939] Escaneando tag_id=126 — offset=0
+2026-04-05 18:35:35 [INFO] core.market_scanner — [2026-04-05 18:35:35.898452] Escaneando tag_id=126 — offset=100
+2026-04-05 18:35:37 [INFO] core.market_scanner — [2026-04-05 18:35:37.129280] Escaneando tag_id=126 — offset=200
+2026-04-05 18:35:37 [INFO] core.market_scanner — [2026-04-05 18:35:37.846681] Escaneando tag_id=96 — offset=0
+2026-04-05 18:35:39 [INFO] core.market_scanner — [2026-04-05 18:35:39.175170] Escaneando tag_id=96 — offset=100
+2026-04-05 18:35:39 [INFO] core.market_scanner — [2026-04-05 18:35:39.761100] Escaneando tag_id=95 — offset=0
+2026-04-05 18:35:40 [INFO] core.market_scanner — [2026-04-05 18:35:40.448420] 428 mercados políticos encontrados ($50K–$250K)
+2026-04-05 18:35:44 [INFO] core.news_monitor — [2026-04-05 18:35:44.350304] 88 artículos obtenidos de 12 feeds
+2026-04-05 18:35:48 [INFO] core.news_monitor — [2026-04-05 18:35:48.793178] 5/88 artículos guardados en Supabase
+2026-04-05 18:35:50 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.2s (intento 1/4)
+2026-04-05 18:35:53 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 7.2s (intento 2/4)
+2026-04-05 18:36:01 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 17.9s (intento 3/4)
+2026-04-05 18:36:20 [WARNING] core.gdelt_news — [GDELT] Rate limited después de 4 intentos
+2026-04-05 18:36:21 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.0s (intento 1/4)
+2026-04-05 18:36:24 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 4.9s (intento 2/4)
+2026-04-05 18:36:30 [WARNING] core.gdelt_news — [GDELT] Error inesperado: Expecting value: line 1 column 1 (char 0)
+2026-04-05 18:36:31 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 2.3s (intento 1/4)
+2026-04-05 18:36:34 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 7.0s (intento 2/4)
+2026-04-05 18:36:42 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 18.2s (intento 3/4)
+2026-04-05 18:36:53 [ERROR] core.paper_trader — [2026-04-05 18:36:53.519128] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 18:36:53 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
+2026-04-05 18:36:54 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 18:36:59 [INFO] server — [API] Stop solicitado desde el dashboard — esperando fin de ciclo
+2026-04-05 18:37:02 [WARNING] core.gdelt_news — [GDELT] Rate limited después de 4 intentos
+2026-04-05 18:37:04 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 1.6s (intento 1/4)
+2026-04-05 18:37:05 [INFO] __main__ — [PolyHunt] Bot pausado como se solicitó
+2026-04-05 18:37:07 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 6.0s (intento 2/4)
+2026-04-05 18:37:13 [INFO] core.gdelt_news — [GDELT] Rate limited (429), backoff 20.5s (intento 3/4)
