@@ -30,6 +30,12 @@ def get_db() -> Client:
     return _client
 
 
+def reset_db() -> None:
+    """Descarta el cliente actual para forzar reconexión en el próximo get_db()."""
+    global _client
+    _client = None
+
+
 def db_retry(
     fn: Callable[[], T],
     max_retries: int = 3,
@@ -81,6 +87,7 @@ def db_retry(
                 raise
 
             if attempt < max_retries:
+                reset_db()
                 logger.warning(
                     f"[db_retry] {context} intento {attempt}/{max_retries} falló: {error_name} | "
                     f"Reintentando en {delay}s..."

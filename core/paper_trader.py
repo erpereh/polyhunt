@@ -12,7 +12,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from core.db import get_db, db_retry
+from core.db import get_db, db_retry, reset_db
 
 logger = logging.getLogger(__name__)
 
@@ -524,5 +524,6 @@ def get_dashboard_data() -> dict:
             "has_activity":        (total_trades_count + total_positions_count) > 0,
         }
     except Exception as e:
+        reset_db()
         logger.error(f"[{datetime.now()}] Error obteniendo datos dashboard: {e}")
         return {}

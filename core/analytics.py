@@ -14,7 +14,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 import math
 
-from core.db import get_db
+from core.db import get_db, reset_db
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,7 @@ def get_analytics_data() -> dict:
         return result
         
     except Exception as e:
+        reset_db()
         logger.error(f"[Analytics] Error calculando metricas: {e}")
         return {
             "win_rate_by_model": {"cerebras": 0, "groq": 0},
@@ -445,6 +446,7 @@ def get_resolution_calendar(days_ahead: int = 30) -> list:
         return result
         
     except Exception as e:
+        reset_db()
         logger.error(f"[Analytics] Error obteniendo calendario: {e}")
         return []
 
