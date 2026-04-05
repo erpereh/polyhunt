@@ -1,0 +1,300 @@
+2026-04-05 15:04:48
+INFO
+2026-04-05 15:04:48 [INFO] core.market_scanner — [2026-04-05 15:04:48.775120] Escaneando tag_id=95 — offset=0
+2026-04-05 15:04:49
+INFO
+2026-04-05 15:04:49 [INFO] core.market_scanner — [2026-04-05 15:04:49.513850] 431 mercados políticos encontrados ($50K–$250K)
+2026-04-05 15:04:53
+INFO
+2026-04-05 15:04:53 [INFO] core.news_monitor — [2026-04-05 15:04:53.417642] 73 artículos obtenidos de 12 feeds
+2026-04-05 15:04:55
+INFO
+2026-04-05 15:04:55 [INFO] core.news_monitor — [2026-04-05 15:04:55.634177] 3/73 artículos guardados en Supabase
+2026-04-05 15:04:56
+WARNING
+2026-04-05 15:04:56 [WARNING] core.gdelt_news — [GDELT] Error HTTP: 429
+2026-04-05 15:04:59
+WARNING
+2026-04-05 15:04:59 [WARNING] core.gdelt_news — [GDELT] Error HTTP: 429
+2026-04-05 15:05:03
+WARNING
+2026-04-05 15:05:03 [WARNING] core.gdelt_news — [GDELT] Error HTTP: 429
+2026-04-05 15:05:07
+WARNING
+2026-04-05 15:05:07 [WARNING] core.gdelt_news — [GDELT] Error HTTP: 429
+2026-04-05 15:05:10
+WARNING
+2026-04-05 15:05:10 [WARNING] core.gdelt_news — [GDELT] Error HTTP: 429
+2026-04-05 15:05:10
+INFO
+2026-04-05 15:05:10 [INFO] core.gdelt_news — [GDELT] Total 0 artículos únicos para 150 mercados
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.gdelt_news — [GDELT] Error HTTP: 429
+2026-04-05 15:05:14
+INFO
+2026-04-05 15:05:14 [INFO] core.gdelt_news — [GDELT] Ciclo completado: fetched=0 saved=0 markets=0
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+WARNING
+2026-04-05 15:05:14 [WARNING] core.market_correlator — [Correlator] Error cargando embedder: module 'torch.utils._pytree' has no attribute 'register_pytree_node'
+2026-04-05 15:05:14
+INFO
+2026-04-05 15:05:14 [INFO] core.market_correlator — [Correlator] Actualizados 0/10 embeddings
+2026-04-05 15:05:18
+INFO
+[SCAN] 2026-04-05 15:05:18 [INFO] __main__ — [SCAN] Quant skip | market=0xca2059450e49cc... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:20
+INFO
+[SCAN] 2026-04-05 15:05:20 [INFO] __main__ — [SCAN] Quant skip | market=0x1b89a207ec7cd0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:22
+INFO
+[SCAN] 2026-04-05 15:05:22 [INFO] __main__ — [SCAN] Quant skip | market=0xc6564d7fc7bb20... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:24
+INFO
+[SCAN] 2026-04-05 15:05:24 [INFO] __main__ — [SCAN] Quant skip | market=0x370c146544d0fb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:25
+WARNING
+2026-04-05 15:05:25 [WARNING] core.market_scanner — [2026-04-05 15:05:25.953483] Error HTTP obteniendo precio mid 1106157923224942...: 404
+2026-04-05 15:05:26
+INFO
+[SCAN] 2026-04-05 15:05:26 [INFO] __main__ — [SCAN] Quant skip | market=0xa6093b047455f1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:28
+INFO
+[SCAN] 2026-04-05 15:05:28 [INFO] __main__ — [SCAN] Quant skip | market=0xcd01256212f107... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:29
+INFO
+[SCAN] 2026-04-05 15:05:29 [INFO] __main__ — [SCAN] Quant skip | market=0xa04f9a5818493b... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:31
+INFO
+[SCAN] 2026-04-05 15:05:31 [INFO] __main__ — [SCAN] Quant skip | market=0x433587daba653f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:32
+INFO
+[SCAN] 2026-04-05 15:05:32 [INFO] __main__ — [SCAN] Quant skip | market=0x4266ab92114897... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:34
+INFO
+[QUEUE] 2026-04-05 15:05:34 [INFO] __main__ — [QUEUE] Enqueued | market=0x96fd9357d0245c... | reason=news | force=True | price=0.0155
+2026-04-05 15:05:38
+INFO
+[SCAN] 2026-04-05 15:05:38 [INFO] __main__ — [SCAN] Quant skip | market=0x9be876deca1f73... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:40
+INFO
+[LLM] 2026-04-05 15:05:40 [INFO] core.llm_analyzer — [LLM] Cerebras multi-sample (3 muestras) — mean=0.12 std=0.000 | Will Donald Trump be the next leader out
+2026-04-05 15:05:42
+INFO
+[LLM] 2026-04-05 15:05:42 [INFO] core.llm_analyzer — [LLM] Groq OK — prob=0.05 conf=medium | Will Donald Trump be the next leader out before 20
+2026-04-05 15:05:42
+INFO
+[LLM] 2026-04-05 15:05:42 [INFO] core.llm_analyzer — [LLM] Reasoning overlap bajo (17.6% < 30%) — modelos no alineados | Will Donald Trump be the next leader out before 20
+2026-04-05 15:05:42
+INFO
+[LLM] 2026-04-05 15:05:42 [INFO] __main__ — [LLM] No trade | market=0x96fd9357d0245c... | c=0.12 | g=0.05 | gap=0.000
+2026-04-05 15:05:45
+INFO
+[SCAN] 2026-04-05 15:05:45 [INFO] __main__ — [SCAN] Quant skip | market=0x247eabb5ea2c71... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:47
+INFO
+[SCAN] 2026-04-05 15:05:47 [INFO] __main__ — [SCAN] Quant skip | market=0x05bd10e73dc1ce... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:50
+INFO
+[SCAN] 2026-04-05 15:05:50 [INFO] __main__ — [SCAN] Quant skip | market=0x6b4b89bb3bfead... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:54
+INFO
+[SCAN] 2026-04-05 15:05:54 [INFO] __main__ — [SCAN] Quant skip | market=0xc11e997578fa83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:54
+WARNING
+2026-04-05 15:05:54 [WARNING] core.market_scanner — [2026-04-05 15:05:54.249692] Error HTTP obteniendo precio mid 5938087988569072...: 404
+2026-04-05 15:05:54
+INFO
+[SCAN] 2026-04-05 15:05:54 [INFO] __main__ — [SCAN] Quant skip | market=0x64e51f9b2c7f43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:55
+INFO
+[SCAN] 2026-04-05 15:05:55 [INFO] __main__ — [SCAN] Quant skip | market=0x2636a06ef9192d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:05:58
+INFO
+[SCAN] 2026-04-05 15:05:58 [INFO] __main__ — [SCAN] Quant skip | market=0xe7ef027386c6ba... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:03
+INFO
+[SCAN] 2026-04-05 15:06:03 [INFO] __main__ — [SCAN] Quant skip | market=0xb3fbac28ca4204... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:08
+INFO
+[SCAN] 2026-04-05 15:06:08 [INFO] __main__ — [SCAN] Quant skip | market=0x857a2ae8088bc2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:08
+INFO
+[SCAN] 2026-04-05 15:06:08 [INFO] __main__ — [SCAN] Quant skip | market=0x9bc5b4e8a866be... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:10
+INFO
+[QUEUE] 2026-04-05 15:06:10 [INFO] __main__ — [QUEUE] Enqueued | market=0x325d0ee1889510... | reason=news | force=True | price=0.0205
+2026-04-05 15:06:12
+INFO
+[LLM] 2026-04-05 15:06:12 [INFO] core.llm_analyzer — [LLM] Cerebras multi-sample (3 muestras) — mean=0.15 std=0.000 | Will Japan send warships through the Str
+2026-04-05 15:06:13
+INFO
+[SCAN] 2026-04-05 15:06:13 [INFO] __main__ — [SCAN] Quant skip | market=0x731178908877c9... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:14
+INFO
+[LLM] 2026-04-05 15:06:14 [INFO] core.llm_analyzer — [LLM] Groq OK — prob=0.05 conf=medium | Will Japan send warships through the Strait of Hor
+2026-04-05 15:06:14
+INFO
+[LLM] 2026-04-05 15:06:14 [INFO] core.llm_analyzer — [LLM] Reasoning overlap bajo (5.3% < 30%) — modelos no alineados | Will Japan send warships through the Strait of Hor
+2026-04-05 15:06:14
+INFO
+[LLM] 2026-04-05 15:06:14 [INFO] __main__ — [LLM] No trade | market=0x325d0ee1889510... | c=0.15 | g=0.05 | gap=0.000
+2026-04-05 15:06:15
+INFO
+[SCAN] 2026-04-05 15:06:15 [INFO] __main__ — [SCAN] Quant skip | market=0x74e5ba38a2cb83... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:16
+INFO
+[SCAN] 2026-04-05 15:06:16 [INFO] __main__ — [SCAN] Quant skip | market=0xf773a12cc13214... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:16
+INFO
+[SCAN] 2026-04-05 15:06:16 [INFO] __main__ — [SCAN] Quant skip | market=0x44efa7a078d27c... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:17
+INFO
+[SCAN] 2026-04-05 15:06:17 [INFO] __main__ — [SCAN] Quant skip | market=0x394b2be8876347... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:18
+INFO
+[SCAN] 2026-04-05 15:06:18 [INFO] __main__ — [SCAN] Quant skip | market=0x1991f63d7497ae... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:19
+INFO
+[SCAN] 2026-04-05 15:06:19 [INFO] __main__ — [SCAN] Quant skip | market=0x5ae264c7a5977d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:26
+INFO
+[SCAN] 2026-04-05 15:06:26 [INFO] __main__ — [SCAN] Quant skip | market=0x21cadb8a9cfd75... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:29
+INFO
+[SCAN] 2026-04-05 15:06:29 [INFO] __main__ — [SCAN] Quant skip | market=0x5ff8465273252f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:38
+WARNING
+2026-04-05 15:06:38 [WARNING] core.market_scanner — [2026-04-05 15:06:38.282126] Error HTTP obteniendo precio mid 8920003427071268...: 404
+2026-04-05 15:06:46
+INFO
+[SCAN] 2026-04-05 15:06:46 [INFO] __main__ — [SCAN] Quant skip | market=0xcead388a140c43... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:47
+INFO
+[SCAN] 2026-04-05 15:06:47 [INFO] __main__ — [SCAN] Quant skip | market=0x674c0894f8992f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:48
+INFO
+[SCAN] 2026-04-05 15:06:48 [INFO] __main__ — [SCAN] Quant skip | market=0x8025fb16d3cd32... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:49
+INFO
+[SCAN] 2026-04-05 15:06:49 [INFO] __main__ — [SCAN] Quant skip | market=0x8e19827705b34f... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:51
+INFO
+[SCAN] 2026-04-05 15:06:51 [INFO] __main__ — [SCAN] Quant skip | market=0x9248190b831a98... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:53
+INFO
+[SCAN] 2026-04-05 15:06:53 [INFO] __main__ — [SCAN] Quant skip | market=0x06345583ca9b85... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:56
+INFO
+[SCAN] 2026-04-05 15:06:56 [INFO] __main__ — [SCAN] Quant skip | market=0x7d9928e23aefb2... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:57
+INFO
+[SCAN] 2026-04-05 15:06:57 [INFO] __main__ — [SCAN] Quant skip | market=0xfa0f936e75c4ce... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:06:59
+INFO
+[SCAN] 2026-04-05 15:06:59 [INFO] __main__ — [SCAN] Quant skip | market=0xb9212b9cb5404a... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:00
+INFO
+[SCAN] 2026-04-05 15:07:00 [INFO] __main__ — [SCAN] Quant skip | market=0x583c901fbd72f0... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:00
+INFO
+[QUEUE] 2026-04-05 15:07:00 [INFO] __main__ — [QUEUE] Enqueued | market=0x8f0de3bde52136... | reason=price_move | force=True | price=0.1150
+2026-04-05 15:07:03
+INFO
+[LLM] 2026-04-05 15:07:03 [INFO] core.llm_analyzer — [LLM] Cerebras multi-sample (3 muestras) — mean=0.08 std=0.000 | Will Russia enter Sloviansk by June 30?
+2026-04-05 15:07:03
+INFO
+[LLM] 2026-04-05 15:07:03 [INFO] core.llm_analyzer — [LLM] Gap pequeño (3.5%) o conf low — sin Groq | Will Russia enter Sloviansk by June 30?
+2026-04-05 15:07:03
+INFO
+[LLM] 2026-04-05 15:07:03 [INFO] __main__ — [LLM] No trade | market=0x8f0de3bde52136... | c=0.08 | g=- | gap=0.035
+2026-04-05 15:07:05
+WARNING
+2026-04-05 15:07:05 [WARNING] core.market_scanner — [2026-04-05 15:07:05.477901] Error HTTP obteniendo precio mid 7953963058173386...: 404
+2026-04-05 15:07:07
+WARNING
+2026-04-05 15:07:07 [WARNING] core.market_scanner — [2026-04-05 15:07:07.554979] Error HTTP obteniendo precio mid 8152270884045047...: 404
+2026-04-05 15:07:09
+INFO
+[SCAN] 2026-04-05 15:07:09 [INFO] __main__ — [SCAN] Quant skip | market=0xc6158282b57404... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:12
+WARNING
+2026-04-05 15:07:12 [WARNING] core.market_scanner — [2026-04-05 15:07:12.564742] Error HTTP obteniendo precio mid 1011899928742599...: 404
+2026-04-05 15:07:13
+INFO
+[SCAN] 2026-04-05 15:07:13 [INFO] __main__ — [SCAN] Quant skip | market=0xba67c6e6a050bf... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:16
+INFO
+[SCAN] 2026-04-05 15:07:16 [INFO] __main__ — [SCAN] Quant skip | market=0x641830333ea221... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:22
+INFO
+[SCAN] 2026-04-05 15:07:22 [INFO] __main__ — [SCAN] Quant skip | market=0x0e4ade6df320ac... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:24
+INFO
+[SCAN] 2026-04-05 15:07:24 [INFO] __main__ — [SCAN] Quant skip | market=0x6d6b9d5f817261... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:31
+INFO
+[SCAN] 2026-04-05 15:07:31 [INFO] __main__ — [SCAN] Quant skip | market=0x57de5cb5861ac1... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:31
+WARNING
+2026-04-05 15:07:31 [WARNING] core.market_scanner — [2026-04-05 15:07:31.915239] Error HTTP obteniendo precio mid 5969457629035666...: 404
+2026-04-05 15:07:32
+INFO
+[SCAN] 2026-04-05 15:07:32 [INFO] __main__ — [SCAN] Quant skip | market=0x57c75de5d056d8... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:33
+INFO
+[SCAN] 2026-04-05 15:07:33 [INFO] __main__ — [SCAN] Quant skip | market=0xa0a62ba83d66d7... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:35
+INFO
+[SCAN] 2026-04-05 15:07:35 [INFO] __main__ — [SCAN] Quant skip | market=0xa61700026c9208... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:35
+WARNING
+2026-04-05 15:07:35 [WARNING] core.market_scanner — [2026-04-05 15:07:35.604982] Error HTTP obteniendo precio mid 5569766203515577...: 404
+2026-04-05 15:07:36
+INFO
+[SCAN] 2026-04-05 15:07:36 [INFO] __main__ — [SCAN] Quant skip | market=0x6359471bcaffcb... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:42
+INFO
+[SCAN] 2026-04-05 15:07:42 [INFO] __main__ — [SCAN] Quant skip | market=0xad80f8a007ce2d... | score=25 | reason=precio fuera 2%-98%,dias fuera 7-60,sin noticia 24h
+2026-04-05 15:07:43
+INFO
+[QUEUE] 2026-04-05 15:07:43 [INFO] __main__ — [QUEUE] Enqueued | market=0xa559c916013489... | reason=price_move | force=True | price=0.0105
+2026-04-05 15:07:45
+INFO
+[LLM] 2026-04-05 15:07:45 [INFO] core.llm_analyzer — [LLM] Cerebras multi-sample (3 muestras) — mean=0.03 std=0.000 | Will Cho Kuk win the 2026 Busan Mayoral
+2026-04-05 15:07:45
+INFO
+[LLM] 2026-04-05 15:07:45 [INFO] core.llm_analyzer — [LLM] Gap pequeño (1.9%) o conf low — sin Groq | Will Cho Kuk win the 2026 Busan Mayoral Election?
+2026-04-05 15:07:45
+INFO
+[LLM] 2026-04-05 15:07:45 [INFO] __main__ — [LLM] No trade | market=0xa559c916013489... | c=0.03 | g=- | gap=0.019
+2026-04-05 15:07:47
+INFO
+2026-04-05 15:07:47 [INFO] __main__ — [Scan #4] 198.6s | Mercados=150 · CambioPrecio=7 · NoticiasNuevas=3 · ColaLLM=0 · QuantSkip=50 · CerebrasOK/Err=12/0 · GroqOK/Err=2/0 · Cooldowns=cerebras:0 groq:0 · Trades=0

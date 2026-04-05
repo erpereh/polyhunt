@@ -7,6 +7,11 @@ Detecta mercados relacionados usando:
 
 Ejemplo: Si "Trump wins election" sube, "Trump policy X" probablemente también.
 
+Features:
+  - Graceful degradation si embeddings fallan
+  - Single warning log (no spam)
+  - El bot sigue funcionando sin correlaciones si hay errores
+
 Requiere:
   - pgvector extension en Supabase
   - sentence-transformers para embeddings (all-MiniLM-L6-v2, 384 dims)
@@ -26,25 +31,63 @@ SIMILARITY_THRESHOLD = 0.7      # Cosine similarity mínima para considerar rela
 PRICE_CORRELATION_DAYS = 14     # Días de historial para correlación de precios
 MIN_CORRELATION = 0.5           # Correlación mínima para considerar relacionados
 
-# Cache de embedder (carga lazy)
+# Estado global del embedder
 _embedder = None
+_embedder_failed = False        # Si ya falló, no reintentar
+_embedder_error_logged = False  # Para no spamear warnings
 
 
 def _get_embedder():
-    """Carga el modelo de embeddings de forma lazy."""
-    global _embedder
-    if _embedder is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            _embedder = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("[Correlator] Modelo de embeddings cargado")
-        except ImportError:
-            logger.warning("[Correlator] sentence-transformers no instalado")
-            return None
-        except Exception as e:
-            logger.warning(f"[Correlator] Error cargando embedder: {e}")
-            return None
-    return _embedder
+    """
+    Carga el modelo de embeddings de forma lazy.
+    
+    Si ya falló anteriormente, retorna None inmediatamente sin reintentar.
+    Solo loguea el error una vez para evitar spam.
+    """
+    global _embedder, _embedder_failed, _embedder_error_logged
+    
+    # Si ya falló, no reintentar
+    if _embedder_failed:
+        return None
+    
+    # Si ya está cargado, retornar
+    if _embedder is not None:
+        return _embedder
+    
+    # Intentar cargar
+    try:
+        from sentence_transformers import SentenceTransformer
+        _embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        logger.info("[Correlator] Modelo de embeddings cargado exitosamente")
+        return _embedder
+        
+    except ImportError as e:
+        _embedder_failed = True
+        if not _embedder_error_logged:
+            logger.warning("[Correlator] sentence-transformers no instalado. Correlaciones deshabilitadas.")
+            _embedder_error_logged = True
+        return None
+        
+    except Exception as e:
+        _embedder_failed = True
+        if not _embedder_error_logged:
+            logger.warning(f"[Correlator] Error cargando embedder: {e}. Correlaciones deshabilitadas.")
+            _embedder_error_logged = True
+        return None
+
+
+def is_embedder_available() -> bool:
+    """Retorna True si el embedder está disponible y funcionando."""
+    return _get_embedder() is not None
+
+
+def reset_embedder_state() -> None:
+    """Resetea el estado del embedder para permitir reintento (útil después de actualizar dependencias)."""
+    global _embedder, _embedder_failed, _embedder_error_logged
+    _embedder = None
+    _embedder_failed = False
+    _embedder_error_logged = False
+    logger.info("[Correlator] Estado del embedder reseteado")
 
 
 def compute_embedding(text: str) -> Optional[list[float]]:
@@ -55,7 +98,7 @@ def compute_embedding(text: str) -> Optional[list[float]]:
         text: Texto a embeber
     
     Returns:
-        Lista de floats (384 dims) o None si falla
+        Lista de floats (384 dims) o None si falla o embedder no disponible
     """
     embedder = _get_embedder()
     if embedder is None:
@@ -70,6 +113,7 @@ def compute_embedding(text: str) -> Optional[list[float]]:
         embedding = embedder.encode(clean_text, convert_to_numpy=True)
         return embedding.tolist()
     except Exception as e:
+        # No loguear cada error individual, solo debug
         logger.debug(f"[Correlator] Error computando embedding: {e}")
         return None
 
@@ -347,6 +391,8 @@ def update_all_embeddings(markets: list[dict], batch_size: int = 20) -> int:
     """
     Actualiza embeddings para una lista de mercados.
     
+    Si el embedder no está disponible, retorna 0 silenciosamente.
+    
     Args:
         markets: Lista de mercados
         batch_size: Tamaño del batch (para no sobrecargar)
@@ -354,6 +400,10 @@ def update_all_embeddings(markets: list[dict], batch_size: int = 20) -> int:
     Returns:
         Número de embeddings actualizados
     """
+    # Verificar si embedder está disponible antes de procesar
+    if not is_embedder_available():
+        return 0
+    
     updated = 0
     
     for market in markets[:batch_size]:
@@ -367,7 +417,9 @@ def update_all_embeddings(markets: list[dict], batch_size: int = 20) -> int:
         if update_market_embedding(market_id, question, description):
             updated += 1
     
-    logger.info(f"[Correlator] Actualizados {updated}/{len(markets[:batch_size])} embeddings")
+    if updated > 0:
+        logger.info(f"[Correlator] Actualizados {updated}/{len(markets[:batch_size])} embeddings")
+    
     return updated
 
 
