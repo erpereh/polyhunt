@@ -16,6 +16,7 @@ Ventajas sobre RSS:
 import logging
 import re
 import hashlib
+import time
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 from urllib.parse import quote_plus
@@ -106,6 +107,8 @@ def fetch_gdelt_news(
         with httpx.Client(timeout=30.0) as client:
             response = client.get(url)
             response.raise_for_status()
+            if not response.text.strip():
+                return []
             data = response.json()
             
             items = data.get("articles", [])
@@ -195,8 +198,11 @@ def fetch_news_for_markets(markets: list[dict], timespan: str = "6h") -> list[di
     all_keywords = list(market_keywords.keys())
     batch_size = 8
     
-    for i in range(0, len(all_keywords), batch_size):
+    max_batches = 5  # Máximo 5 batches por ciclo para no saturar GDELT
+    for i in range(0, min(len(all_keywords), batch_size * max_batches), batch_size):
         batch = all_keywords[i:i+batch_size]
+        if i > 0:
+            time.sleep(2)  # Pausa entre batches para evitar 429
         articles = fetch_gdelt_news(batch, timespan)
         
         for article in articles:
@@ -364,7 +370,8 @@ def process_gdelt_cycle(markets: list[dict]) -> dict:
         stats["articles_saved"] += save_gdelt_articles(articles)
         stats["markets_covered"] = len(set(a.get("related_market_id") for a in articles if a.get("related_market_id")))
     
-    # Fetch general de política
+    # Fetch general de política (pausa antes para no saturar)
+    time.sleep(3)
     political_articles = fetch_gdelt_news(POLITICAL_KEYWORDS, timespan="3h")
     stats["articles_fetched"] += len(political_articles)
     stats["articles_saved"] += save_gdelt_articles(political_articles)
