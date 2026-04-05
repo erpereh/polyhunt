@@ -1,1 +1,8 @@
 2026-04-05 15:28:32 [INFO] server — [API] Logs borrados desde el dashboard
+2026-04-05 15:44:53 [ERROR] server — Error en GET /api/settings/keys: Server disconnected
+2026-04-05 15:44:53 [ERROR] core.paper_trader — [2026-04-05 15:44:53.320229] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 15:45:53 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 15:45:53 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 15:45:53 [INFO] core.db — Conexión a Supabase establecida
+2026-04-05 15:49:53 [ERROR] core.paper_trader — [2026-04-05 15:49:53.485642] Error obteniendo datos dashboard: Server disconnected
+2026-04-05 15:49:53 [ERROR] core.analytics — [Analytics] Error calculando metricas: Server disconnected
